@@ -1,0 +1,107 @@
+package it.agoldoni.player
+
+import android.os.Build
+import android.os.Bundle
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricPrompt
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import dagger.hilt.android.AndroidEntryPoint
+import it.agoldoni.player.domain.CryptoManager
+import it.agoldoni.player.ui.BiometricGateScreen
+import it.agoldoni.player.ui.PlayerApp
+import javax.inject.Inject
+
+@AndroidEntryPoint
+class MainActivity : FragmentActivity() {
+
+    @Inject
+    lateinit var cryptoManager: CryptoManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            val colorScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                dynamicLightColorScheme(LocalContext.current)
+            } else {
+                lightColorScheme()
+            }
+            MaterialTheme(colorScheme = colorScheme) {
+                BiometricGate()
+            }
+        }
+    }
+
+    @Composable
+    private fun BiometricGate() {
+        // Se non c'è ancora una DEK (primo utilizzo), non serve autenticazione
+        var isUnlocked by remember { mutableStateOf(!cryptoManager.isDekInitialized) }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
+
+        if (isUnlocked) {
+            PlayerApp()
+        } else {
+            // Lancia il prompt biometrico automaticamente al primo render
+            LaunchedEffect(Unit) {
+                showBiometricPrompt(
+                    onSuccess = { isUnlocked = true },
+                    onError = { errorMessage = it }
+                )
+            }
+
+            BiometricGateScreen(
+                onUnlockClick = {
+                    errorMessage = null
+                    showBiometricPrompt(
+                        onSuccess = { isUnlocked = true },
+                        onError = { errorMessage = it }
+                    )
+                },
+                errorMessage = errorMessage
+            )
+        }
+    }
+
+    private fun showBiometricPrompt(
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        try {
+            val (cipher, isSetup) = cryptoManager.prepareBiometricCipher()
+            val prompt = BiometricPrompt(
+                this,
+                ContextCompat.getMainExecutor(this),
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        val authedCipher = result.cryptoObject?.cipher ?: return
+                        try {
+                            cryptoManager.obtainDek(authedCipher, isSetup)
+                            onSuccess()
+                        } catch (e: Exception) {
+                            onError("Errore durante lo sblocco della chiave")
+                        }
+                    }
+
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        onError(errString.toString())
+                    }
+                }
+            )
+            prompt.authenticate(
+                BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("Autenticazione richiesta")
+                    .setSubtitle("Autenticati per accedere alla libreria")
+                    .setNegativeButtonText("Annulla")
+                    .build(),
+                BiometricPrompt.CryptoObject(cipher)
+            )
+        } catch (e: Exception) {
+            onError("Errore di autenticazione biometrica")
+        }
+    }
+}

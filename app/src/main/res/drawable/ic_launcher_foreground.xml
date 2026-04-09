@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Ovale centrale (corpo della chiave, centro 54,64) -->
+    <path
+        android:pathData="M54,54 C61,54 67,58 67,64 C67,70 61,74 54,74 C47,74 41,70 41,64 C41,58 47,54 54,54"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Gambo + ricciolo superiore -->
+    <path
+        android:pathData="M54,54 L54,34 C54,26 57,22 62,21 C67,20 70,25 68,32 C66,38 60,42 57,46 C55,48 54,51 54,54"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Spirale inferiore -->
+    <path
+        android:pathData="M54,74 L54,82 C54,86 50,88 47,86 C44,84 45,81 47,82"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+</vector>

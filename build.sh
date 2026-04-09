@@ -19,7 +19,7 @@ fi
 # Installa gradlew se non presente
 if [ ! -f "./gradlew" ]; then
     echo "[INFO] gradlew non trovato, lo scarico..."
-    gradle wrapper --gradle-version 8.2
+    gradle wrapper --gradle-version 8.6
 fi
 
 chmod +x ./gradlew
