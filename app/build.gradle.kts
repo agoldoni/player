@@ -78,4 +78,5 @@ dependencies {
     implementation(libs.compose.material.icons.extended)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.biometric)
+    implementation(libs.commons.net)
 }

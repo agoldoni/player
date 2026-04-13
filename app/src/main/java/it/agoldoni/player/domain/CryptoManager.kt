@@ -136,6 +136,30 @@ class CryptoManager @Inject constructor(
     }
 
     /**
+     * Cifra un array di byte con la DEK.
+     * Formato output: [IV (12 byte)] [dati cifrati + GCM tag]
+     * Pensato per payload piccoli (es. credenziali FTP), non per file.
+     */
+    fun encryptBytes(dek: SecretKey, plaintext: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, dek)
+        val iv = cipher.iv
+        val ciphertext = cipher.doFinal(plaintext)
+        return iv + ciphertext
+    }
+
+    /**
+     * Decifra un array di byte prodotto da [encryptBytes].
+     */
+    fun decryptBytes(dek: SecretKey, encrypted: ByteArray): ByteArray {
+        val iv = encrypted.sliceArray(0 until GCM_IV_SIZE)
+        val ciphertext = encrypted.sliceArray(GCM_IV_SIZE until encrypted.size)
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.DECRYPT_MODE, dek, GCMParameterSpec(GCM_TAG_BITS, iv))
+        return cipher.doFinal(ciphertext)
+    }
+
+    /**
      * Decifra un file cifrato con la DEK in un file temporaneo.
      * Formato input: [IV (12 byte)] [dati cifrati + GCM tag]
      * Ritorna il file temporaneo decifrato.

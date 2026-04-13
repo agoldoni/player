@@ -7,6 +7,7 @@ room = "2.6.1"
 navigation = "2.7.6"
 coil = "2.5.0"
 biometric = "1.1.0"
+commons-net = "3.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.12.0" }
@@ -28,6 +29,7 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version = "2.7.0" }
 biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
+commons-net = { group = "commons-net", name = "commons-net", version.ref = "commons-net" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

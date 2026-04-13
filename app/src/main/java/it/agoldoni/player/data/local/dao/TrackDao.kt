@@ -19,6 +19,11 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE uri = :uri LIMIT 1")
     suspend fun getTrackByUri(uri: String): Track?
 
+    @Query(
+        "SELECT * FROM tracks WHERE title = :title AND artist = :artist AND album = :album LIMIT 1"
+    )
+    suspend fun getTrackByMetadata(title: String, artist: String, album: String): Track?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTrack(track: Track)
 

@@ -3,6 +3,7 @@ package it.agoldoni.player.di
 import android.content.Context
 import androidx.room.Room
 import it.agoldoni.player.data.local.PlayerDatabase
+import it.agoldoni.player.data.local.dao.FtpConfigDao
 import it.agoldoni.player.data.local.dao.PlaylistDao
 import it.agoldoni.player.data.local.dao.TrackDao
 import dagger.Module
@@ -24,7 +25,12 @@ object DatabaseModule {
             PlayerDatabase::class.java,
             PlayerDatabase.DATABASE_NAME
         )
-            .addMigrations(PlayerDatabase.MIGRATION_1_2, PlayerDatabase.MIGRATION_2_3, PlayerDatabase.MIGRATION_3_4)
+            .addMigrations(
+                PlayerDatabase.MIGRATION_1_2,
+                PlayerDatabase.MIGRATION_2_3,
+                PlayerDatabase.MIGRATION_3_4,
+                PlayerDatabase.MIGRATION_4_5
+            )
             .build()
 
     @Provides
@@ -34,4 +40,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun providePlaylistDao(db: PlayerDatabase): PlaylistDao = db.playlistDao()
+
+    @Provides
+    @Singleton
+    fun provideFtpConfigDao(db: PlayerDatabase): FtpConfigDao = db.ftpConfigDao()
 }

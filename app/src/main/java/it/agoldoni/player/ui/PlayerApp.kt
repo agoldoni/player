@@ -2,6 +2,8 @@ package it.agoldoni.player.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material3.*
@@ -37,6 +39,30 @@ fun PlayerApp() {
                     onClick = {
                         scope.launch { drawerState.close() }
                         navController.navigate(Screen.Stats.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text("Configura FTP") },
+                    icon = { Icon(Icons.Default.Dns, contentDescription = null) },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(Screen.FtpConfig.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text("Sincronizza da FTP") },
+                    icon = { Icon(Icons.Default.CloudDownload, contentDescription = null) },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(Screen.FtpSync.route) {
                             launchSingleTop = true
                         }
                     },

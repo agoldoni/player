@@ -1,19 +1,17 @@
 package it.agoldoni.player
 
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricPrompt
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import dagger.hilt.android.AndroidEntryPoint
 import it.agoldoni.player.domain.CryptoManager
 import it.agoldoni.player.ui.BiometricGateScreen
 import it.agoldoni.player.ui.PlayerApp
+import it.agoldoni.player.ui.theme.PlayerTheme
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -26,12 +24,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val colorScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                dynamicLightColorScheme(LocalContext.current)
-            } else {
-                lightColorScheme()
-            }
-            MaterialTheme(colorScheme = colorScheme) {
+            PlayerTheme {
                 BiometricGate()
             }
         }

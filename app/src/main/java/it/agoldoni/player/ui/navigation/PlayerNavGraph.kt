@@ -7,6 +7,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import it.agoldoni.player.ui.ftp.FtpConfigScreen
+import it.agoldoni.player.ui.ftp.FtpSyncScreen
 import it.agoldoni.player.ui.info.AppInfoScreen
 import it.agoldoni.player.ui.playlist.PlaylistDetailScreen
 import it.agoldoni.player.ui.playlist.PlaylistListScreen
@@ -25,6 +27,8 @@ sealed class Screen(val route: String) {
     }
     object AppInfo : Screen("app_info")
     object Stats : Screen("stats")
+    object FtpConfig : Screen("ftp_config")
+    object FtpSync : Screen("ftp_sync")
 }
 
 @Composable
@@ -91,6 +95,21 @@ fun PlayerNavGraph(
 
         composable(Screen.Stats.route) {
             StatsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.FtpConfig.route) {
+            FtpConfigScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.FtpSync.route) {
+            FtpSyncScreen(
+                onBack = { navController.popBackStack() },
+                onOpenConfig = {
+                    navController.navigate(Screen.FtpConfig.route) {
+                        launchSingleTop = true
+                    }
+                }
+            )
         }
     }
 }
