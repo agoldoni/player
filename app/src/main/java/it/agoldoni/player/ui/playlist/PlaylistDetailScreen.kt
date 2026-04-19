@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,11 +41,24 @@ fun PlaylistDetailScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var trackToRemove by remember { mutableStateOf<Track?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+    var didInitialScroll by rememberSaveable { mutableStateOf(false) }
 
     val playlist = playlistWithTracks?.playlist
     val tracks = playlistWithTracks?.tracks ?: emptyList()
     val trackIdsInPlaylist = tracks.map { it.id }.toSet()
     val availableTracks = allTracks.filter { it.id !in trackIdsInPlaylist }
+
+    LaunchedEffect(tracks, currentPlayingTrackId) {
+        if (didInitialScroll) return@LaunchedEffect
+        val playingId = currentPlayingTrackId ?: return@LaunchedEffect
+        if (tracks.isEmpty()) return@LaunchedEffect
+        val index = tracks.indexOfFirst { it.id == playingId }
+        if (index >= 0) {
+            listState.scrollToItem(index)
+            didInitialScroll = true
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -144,6 +159,7 @@ fun PlaylistDetailScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),

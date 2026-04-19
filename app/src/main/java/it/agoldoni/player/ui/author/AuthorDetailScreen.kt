@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MusicNote
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +36,19 @@ fun AuthorDetailScreen(
     val shuffleEnabled by viewModel.shuffleEnabled.collectAsStateWithLifecycle()
     val currentPlayingTrackId by viewModel.currentPlayingTrackId.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+    var didInitialScroll by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(tracks, currentPlayingTrackId) {
+        if (didInitialScroll) return@LaunchedEffect
+        val playingId = currentPlayingTrackId ?: return@LaunchedEffect
+        if (tracks.isEmpty()) return@LaunchedEffect
+        val index = tracks.indexOfFirst { it.id == playingId }
+        if (index >= 0) {
+            listState.scrollToItem(index)
+            didInitialScroll = true
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -108,6 +123,7 @@ fun AuthorDetailScreen(
                 )
                 HorizontalDivider()
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {

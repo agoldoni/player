@@ -7,6 +7,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -17,8 +18,10 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +48,19 @@ fun TrackListScreen(
     var selectedTrack by remember { mutableStateOf<Track?>(null) }
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+    var didInitialScroll by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(tracks, playingTrackId) {
+        if (didInitialScroll) return@LaunchedEffect
+        val playingId = playingTrackId ?: return@LaunchedEffect
+        if (tracks.isEmpty()) return@LaunchedEffect
+        val index = tracks.indexOfFirst { it.id == playingId }
+        if (index >= 0) {
+            listState.scrollToItem(index)
+            didInitialScroll = true
+        }
+    }
 
     // Gestione eventi biometrici dal ViewModel
     LaunchedEffect(Unit) {
@@ -164,6 +180,7 @@ fun TrackListScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
@@ -173,6 +190,7 @@ fun TrackListScreen(
                     TrackListItem(
                         track = track,
                         isSelected = selectedTrack?.id == track.id,
+                        isCurrentlyPlaying = track.id == playingTrackId,
                         onClick = {
                             if (selectedTrack != null) {
                                 selectedTrack = null
@@ -196,6 +214,7 @@ fun TrackListScreen(
 private fun TrackListItem(
     track: Track,
     isSelected: Boolean,
+    isCurrentlyPlaying: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -205,7 +224,12 @@ private fun TrackListItem(
             onLongClick = onLongClick
         ),
         headlineContent = {
-            Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                track.title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = if (isCurrentlyPlaying) FontWeight.Bold else FontWeight.Normal
+            )
         },
         supportingContent = {
             Text(
@@ -221,14 +245,24 @@ private fun TrackListItem(
             )
         },
         leadingContent = {
-            Icon(Icons.Default.MusicNote, contentDescription = null)
+            if (isCurrentlyPlaying) {
+                Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = "In riproduzione",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                Icon(Icons.Default.MusicNote, contentDescription = null)
+            }
         },
-        colors = if (isSelected) {
-            ListItemDefaults.colors(
+        colors = when {
+            isSelected -> ListItemDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer
             )
-        } else {
-            ListItemDefaults.colors()
+            isCurrentlyPlaying -> ListItemDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            )
+            else -> ListItemDefaults.colors()
         }
     )
 }
