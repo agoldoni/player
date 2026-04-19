@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -49,16 +48,17 @@ fun TrackListScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
-    var didInitialScroll by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(tracks, playingTrackId) {
-        if (didInitialScroll) return@LaunchedEffect
         val playingId = playingTrackId ?: return@LaunchedEffect
         if (tracks.isEmpty()) return@LaunchedEffect
         val index = tracks.indexOfFirst { it.id == playingId }
         if (index >= 0) {
-            listState.scrollToItem(index)
-            didInitialScroll = true
+            val visible = listState.layoutInfo.visibleItemsInfo
+            val isVisible = visible.any { it.index == index }
+            if (!isVisible) {
+                listState.animateScrollToItem(index)
+            }
         }
     }
 

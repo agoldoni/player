@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,7 +41,6 @@ fun PlaylistDetailScreen(
     var trackToRemove by remember { mutableStateOf<Track?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
-    var didInitialScroll by rememberSaveable { mutableStateOf(false) }
 
     val playlist = playlistWithTracks?.playlist
     val tracks = playlistWithTracks?.tracks ?: emptyList()
@@ -50,13 +48,15 @@ fun PlaylistDetailScreen(
     val availableTracks = allTracks.filter { it.id !in trackIdsInPlaylist }
 
     LaunchedEffect(tracks, currentPlayingTrackId) {
-        if (didInitialScroll) return@LaunchedEffect
         val playingId = currentPlayingTrackId ?: return@LaunchedEffect
         if (tracks.isEmpty()) return@LaunchedEffect
         val index = tracks.indexOfFirst { it.id == playingId }
         if (index >= 0) {
-            listState.scrollToItem(index)
-            didInitialScroll = true
+            val visible = listState.layoutInfo.visibleItemsInfo
+            val isVisible = visible.any { it.index == index }
+            if (!isVisible) {
+                listState.animateScrollToItem(index)
+            }
         }
     }
 
