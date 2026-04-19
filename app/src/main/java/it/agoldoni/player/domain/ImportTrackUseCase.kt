@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import it.agoldoni.player.data.repository.TrackRepository
+import it.agoldoni.player.util.SupportedAudioExtensions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -77,11 +78,16 @@ class ImportTrackUseCase @Inject constructor(
         cryptoManager.encryptFile(dek, source, encryptedFile)
         val encryptedSize = encryptedFile.length()
 
+        val extension = source.extension.lowercase()
+            .takeIf { it in SupportedAudioExtensions }
+            ?: "mp3"
+
         trackRepository.insertTrack(
             track.copy(
                 uri = encryptedFile.absolutePath,
                 originalFileSize = originalSize,
-                encryptedFileSize = encryptedSize
+                encryptedFileSize = encryptedSize,
+                originalExtension = extension
             )
         )
         return true

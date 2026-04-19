@@ -14,7 +14,7 @@ import it.agoldoni.player.data.local.entity.Track
 
 @Database(
     entities = [Track::class, Playlist::class, PlaylistTrackCrossRef::class, FtpConfig::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class PlayerDatabase : RoomDatabase() {
@@ -76,6 +76,12 @@ abstract class PlayerDatabase : RoomDatabase() {
                         updatedAt INTEGER NOT NULL
                     )"""
                 )
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE tracks ADD COLUMN originalExtension TEXT NOT NULL DEFAULT 'mp3'")
             }
         }
     }

@@ -29,7 +29,8 @@ object DatabaseModule {
                 PlayerDatabase.MIGRATION_1_2,
                 PlayerDatabase.MIGRATION_2_3,
                 PlayerDatabase.MIGRATION_3_4,
-                PlayerDatabase.MIGRATION_4_5
+                PlayerDatabase.MIGRATION_4_5,
+                PlayerDatabase.MIGRATION_5_6
             )
             .build()
 

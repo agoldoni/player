@@ -19,5 +19,5 @@ fun rememberMusicFilePicker(
     ) { uris ->
         if (uris.isNotEmpty()) onFilesPicked(uris)
     }
-    return remember { { launcher.launch("audio/mpeg") } }
+    return remember { { launcher.launch("audio/*") } }
 }

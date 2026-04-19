@@ -54,7 +54,7 @@ class PlaybackManager @Inject constructor(
                 var localPlayer: MediaPlayer? = null
                 var localTemp: File? = null
                 try {
-                    localTemp = cryptoManager.decryptToTempFile(dek, File(track.uri))
+                    localTemp = cryptoManager.decryptToTempFile(dek, File(track.uri), track.originalExtension)
                     localPlayer = MediaPlayer().apply {
                         setAudioAttributes(
                             AudioAttributes.Builder()

@@ -47,7 +47,7 @@ sealed interface SyncProgress {
  * Orchestratore della sincronizzazione da FTP:
  * 1. legge la configurazione
  * 2. apre una singola connessione FTP
- * 3. scansiona ricorsivamente alla ricerca di .mp3
+ * 3. scansiona ricorsivamente alla ricerca di file audio supportati (.mp3, .flac)
  * 4. per ogni file: download → estrai metadati → dedup → import
  * 5. chiude la connessione
  *

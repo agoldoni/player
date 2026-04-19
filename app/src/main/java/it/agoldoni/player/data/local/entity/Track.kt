@@ -16,7 +16,8 @@ data class Track(
     val year: String?,
     val trackNumber: String?,
     val albumArtPath: String?,      // path locale alla copertina salvata
-    val originalFileSize: Long = 0, // dimensione file MP3 originale in byte
+    val originalFileSize: Long = 0, // dimensione file audio originale in byte
     val encryptedFileSize: Long = 0, // dimensione file cifrato in byte
+    val originalExtension: String = "mp3", // estensione originale senza punto, lowercase (es. "mp3", "flac")
     val importedAt: Long = System.currentTimeMillis()
 )

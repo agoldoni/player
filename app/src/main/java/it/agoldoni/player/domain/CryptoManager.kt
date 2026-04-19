@@ -162,10 +162,13 @@ class CryptoManager @Inject constructor(
     /**
      * Decifra un file cifrato con la DEK in un file temporaneo.
      * Formato input: [IV (12 byte)] [dati cifrati + GCM tag]
+     * [extension] è l'estensione originale del file audio (senza punto): serve
+     * a dare al file temporaneo un nome coerente col formato, così che
+     * [android.media.MediaPlayer] possa individuare il decoder corretto.
      * Ritorna il file temporaneo decifrato.
      */
-    fun decryptToTempFile(dek: SecretKey, encryptedFile: File): File {
-        val tempFile = File.createTempFile("playback_", ".mp3", context.cacheDir)
+    fun decryptToTempFile(dek: SecretKey, encryptedFile: File, extension: String = "mp3"): File {
+        val tempFile = File.createTempFile("playback_", ".$extension", context.cacheDir)
 
         encryptedFile.inputStream().use { input ->
             val iv = ByteArray(GCM_IV_SIZE)

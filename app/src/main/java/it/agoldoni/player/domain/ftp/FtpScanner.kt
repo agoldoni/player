@@ -1,5 +1,6 @@
 package it.agoldoni.player.domain.ftp
 
+import it.agoldoni.player.util.SupportedAudioExtensions
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -16,8 +17,9 @@ data class FtpRemoteFile(
 
 /**
  * Percorre ricorsivamente un server FTP a partire da una root e ritorna tutti
- * i file con estensione .mp3 (case-insensitive). L'operazione è cancellabile:
- * tra una directory e l'altra verifica lo stato della coroutine.
+ * i file audio supportati (vedi [SupportedAudioExtensions], case-insensitive).
+ * L'operazione è cancellabile: tra una directory e l'altra verifica lo stato
+ * della coroutine.
  */
 @Singleton
 class FtpScanner @Inject constructor() {
@@ -48,12 +50,15 @@ class FtpScanner @Inject constructor() {
             val childPath = joinPath(directory, name)
             when {
                 entry.isDirectory -> walkInto(client, childPath, acc)
-                entry.isFile && name.endsWith(".mp3", ignoreCase = true) -> {
+                entry.isFile && hasSupportedExtension(name) -> {
                     acc.add(FtpRemoteFile(path = childPath, sizeBytes = entry.size))
                 }
             }
         }
     }
+
+    private fun hasSupportedExtension(name: String): Boolean =
+        SupportedAudioExtensions.any { name.endsWith(".$it", ignoreCase = true) }
 
     private fun normalizeRoot(path: String): String {
         val trimmed = path.trim()

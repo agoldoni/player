@@ -2,6 +2,7 @@ package it.agoldoni.player.domain.ftp
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import it.agoldoni.player.util.supportedExtensionFromPath
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.net.ftp.FTPClient
@@ -25,7 +26,8 @@ class FtpDownloader @Inject constructor(
 
     suspend fun download(client: FTPClient, remotePath: String): File? =
         withContext(Dispatchers.IO) {
-            val dest = File(tempDir, "${UUID.randomUUID()}.mp3")
+            val ext = supportedExtensionFromPath(remotePath) ?: "mp3"
+            val dest = File(tempDir, "${UUID.randomUUID()}.$ext")
             try {
                 val ok = dest.outputStream().use { out ->
                     client.retrieveFile(remotePath, out)
