@@ -10,6 +10,7 @@ import it.agoldoni.player.data.repository.TrackRepository
 import it.agoldoni.player.domain.CryptoManager
 import it.agoldoni.player.domain.CsvExportUseCase
 import it.agoldoni.player.domain.ImportTrackUseCase
+import it.agoldoni.player.domain.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,7 +40,8 @@ class TrackListViewModel @Inject constructor(
     private val trackRepository: TrackRepository,
     private val importTrackUseCase: ImportTrackUseCase,
     private val cryptoManager: CryptoManager,
-    private val csvExportUseCase: CsvExportUseCase
+    private val csvExportUseCase: CsvExportUseCase,
+    private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
     val tracks: StateFlow<List<Track>> = trackRepository
@@ -49,6 +51,8 @@ class TrackListViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
+
+    val playingTrackId: StateFlow<String?> = playbackManager.currentTrackId
 
     private val _events = Channel<TrackListEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
@@ -104,7 +108,23 @@ class TrackListViewModel @Inject constructor(
 
     fun deleteTrack(track: Track) {
         viewModelScope.launch {
+            if (playbackManager.currentTrackId.value == track.id) {
+                playbackManager.stop()
+            }
             trackRepository.deleteTrack(track)
+        }
+    }
+
+    fun togglePlayTrack(track: Track) {
+        if (playbackManager.currentTrackId.value == track.id) {
+            playbackManager.stop()
+            return
+        }
+        val started = playbackManager.play(track)
+        if (!started) {
+            viewModelScope.launch {
+                _events.send(TrackListEvent.ShowError("Sessione scaduta, riavvia l'app"))
+            }
         }
     }
 

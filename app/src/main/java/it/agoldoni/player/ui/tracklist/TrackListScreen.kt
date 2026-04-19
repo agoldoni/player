@@ -12,7 +12,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -38,6 +40,7 @@ fun TrackListScreen(
     viewModel: TrackListViewModel = hiltViewModel()
 ) {
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
+    val playingTrackId by viewModel.playingTrackId.collectAsStateWithLifecycle()
     val pickFiles = rememberMusicFilePicker { uris -> viewModel.importTracks(uris) }
     var selectedTrack by remember { mutableStateOf<Track?>(null) }
     val context = LocalContext.current
@@ -122,6 +125,17 @@ fun TrackListScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (selectedTrack != null) {
+                    val isPlayingSelected = playingTrackId == selectedTrack!!.id
+                    SmallFloatingActionButton(
+                        onClick = { viewModel.togglePlayTrack(selectedTrack!!) },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ) {
+                        Icon(
+                            if (isPlayingSelected) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlayingSelected) "Ferma riproduzione" else "Riproduci traccia"
+                        )
+                    }
                     SmallFloatingActionButton(
                         onClick = {
                             viewModel.deleteTrack(selectedTrack!!)

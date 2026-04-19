@@ -1,27 +1,21 @@
 package it.agoldoni.player.ui.trackdetail
 
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.agoldoni.player.data.local.entity.Track
 import it.agoldoni.player.data.repository.TrackRepository
-import it.agoldoni.player.domain.CryptoManager
+import it.agoldoni.player.domain.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-import javax.crypto.SecretKey
 import javax.inject.Inject
-
-private const val TAG = "TrackDetailVM"
 
 sealed class TrackDetailEvent {
     data class ShowError(val message: String) : TrackDetailEvent()
@@ -31,7 +25,7 @@ sealed class TrackDetailEvent {
 class TrackDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val trackRepository: TrackRepository,
-    private val cryptoManager: CryptoManager
+    private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
     private val trackId: String = checkNotNull(savedStateHandle["trackId"])
@@ -39,14 +33,19 @@ class TrackDetailViewModel @Inject constructor(
     private val _track = MutableStateFlow<Track?>(null)
     val track: StateFlow<Track?> = _track
 
-    private val _isPlaying = MutableStateFlow(false)
-    val isPlaying: StateFlow<Boolean> = _isPlaying
+    val isPlaying: StateFlow<Boolean> = combine(
+        playbackManager.currentTrackId,
+        playbackManager.isPlaying
+    ) { currentId, playing ->
+        currentId == trackId && playing
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = false
+    )
 
     private val _events = Channel<TrackDetailEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
-
-    private var mediaPlayer: MediaPlayer? = null
-    private var tempPlaybackFile: File? = null
 
     init {
         viewModelScope.launch {
@@ -55,83 +54,16 @@ class TrackDetailViewModel @Inject constructor(
     }
 
     fun togglePlayback() {
-        val player = mediaPlayer
-        if (player == null) {
-            val dek = cryptoManager.sessionDek
-            if (dek != null) {
-                val uri = _track.value?.uri ?: return
-                startPlayback(uri, dek)
-            } else {
-                viewModelScope.launch {
-                    _events.send(TrackDetailEvent.ShowError("Sessione scaduta, riavvia l'app"))
-                }
-            }
-        } else if (player.isPlaying) {
-            player.pause()
-            _isPlaying.value = false
-        } else {
-            player.start()
-            _isPlaying.value = true
+        val track = _track.value ?: return
+        if (playbackManager.currentTrackId.value == track.id) {
+            if (playbackManager.isPlaying.value) playbackManager.pause() else playbackManager.resume()
+            return
         }
-    }
-
-    private fun startPlayback(encryptedPath: String, dek: SecretKey) {
-        mediaPlayer?.release()
-        mediaPlayer = null
-
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    val encryptedFile = File(encryptedPath)
-                    val tempFile = cryptoManager.decryptToTempFile(dek, encryptedFile)
-                    tempPlaybackFile = tempFile
-
-                    Log.d(TAG, "File decifrato in: ${tempFile.absolutePath}")
-
-                    val player = MediaPlayer().apply {
-                        setAudioAttributes(
-                            AudioAttributes.Builder()
-                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                .setUsage(AudioAttributes.USAGE_MEDIA)
-                                .build()
-                        )
-                        setDataSource(tempFile.absolutePath)
-                        setOnCompletionListener {
-                            _isPlaying.value = false
-                            cleanupTempFile()
-                        }
-                        setOnErrorListener { _, what, extra ->
-                            Log.e(TAG, "MediaPlayer error what=$what extra=$extra")
-                            _isPlaying.value = false
-                            cleanupTempFile()
-                            false
-                        }
-                        prepare()
-                    }
-
-                    mediaPlayer = player
-                    player.start()
-                    _isPlaying.value = true
-                    Log.d(TAG, "Riproduzione avviata: $encryptedPath")
-
-                } catch (e: Exception) {
-                    Log.e(TAG, "startPlayback fallito: $encryptedPath", e)
-                    _isPlaying.value = false
-                    cleanupTempFile()
-                }
+        val started = playbackManager.play(track)
+        if (!started) {
+            viewModelScope.launch {
+                _events.send(TrackDetailEvent.ShowError("Sessione scaduta, riavvia l'app"))
             }
         }
-    }
-
-    private fun cleanupTempFile() {
-        tempPlaybackFile?.delete()
-        tempPlaybackFile = null
-    }
-
-    override fun onCleared() {
-        mediaPlayer?.release()
-        mediaPlayer = null
-        cleanupTempFile()
-        super.onCleared()
     }
 }
