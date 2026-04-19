@@ -83,7 +83,20 @@ class AuthorDetailViewModel @Inject constructor(
         )
 
     fun toggleShuffle() {
-        _shuffleEnabled.value = !_shuffleEnabled.value
+        val enabled = !_shuffleEnabled.value
+        _shuffleEnabled.value = enabled
+
+        if (!ownsCurrentPlayback.value || currentPlaybackIndex < 0) return
+        val current = playbackOrder.getOrNull(currentPlaybackIndex) ?: return
+        val source = tracks.value
+        if (source.isEmpty()) return
+
+        playbackOrder = if (enabled) {
+            listOf(current) + source.filter { it.id != current.id }.shuffled()
+        } else {
+            source
+        }
+        currentPlaybackIndex = playbackOrder.indexOfFirst { it.id == current.id }.coerceAtLeast(0)
     }
 
     fun togglePlayback() {
@@ -116,7 +129,7 @@ class AuthorDetailViewModel @Inject constructor(
         currentPlaybackIndex = index
 
         val started = playbackManager.play(track) {
-            val next = index + 1
+            val next = currentPlaybackIndex + 1
             if (next < playbackOrder.size) {
                 playTrackAt(next)
             } else {
