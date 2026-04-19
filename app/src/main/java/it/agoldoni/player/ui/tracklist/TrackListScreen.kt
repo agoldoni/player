@@ -45,6 +45,7 @@ fun TrackListScreen(
     val playingTrackId by viewModel.playingTrackId.collectAsStateWithLifecycle()
     val pickFiles = rememberMusicFilePicker { uris -> viewModel.importTracks(uris) }
     var selectedTrack by remember { mutableStateOf<Track?>(null) }
+    var trackToDelete by remember { mutableStateOf<Track?>(null) }
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
@@ -113,6 +114,28 @@ fun TrackListScreen(
         }
     }
 
+    trackToDelete?.let { track ->
+        AlertDialog(
+            onDismissRequest = { trackToDelete = null },
+            title = { Text("Elimina traccia") },
+            text = { Text("Eliminare \"${track.title}\"? L'operazione non può essere annullata.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteTrack(track)
+                    trackToDelete = null
+                    selectedTrack = null
+                }) {
+                    Text("Elimina")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { trackToDelete = null }) {
+                    Text("Annulla")
+                }
+            }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -153,10 +176,7 @@ fun TrackListScreen(
                         )
                     }
                     SmallFloatingActionButton(
-                        onClick = {
-                            viewModel.deleteTrack(selectedTrack!!)
-                            selectedTrack = null
-                        },
+                        onClick = { trackToDelete = selectedTrack },
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                     ) {

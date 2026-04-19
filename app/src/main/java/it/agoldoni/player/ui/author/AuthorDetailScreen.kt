@@ -1,12 +1,14 @@
 package it.agoldoni.player.ui.author
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -34,8 +36,17 @@ fun AuthorDetailScreen(
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val shuffleEnabled by viewModel.shuffleEnabled.collectAsStateWithLifecycle()
     val currentPlayingTrackId by viewModel.currentPlayingTrackId.collectAsStateWithLifecycle()
+    var selectedTrack by remember { mutableStateOf<Track?>(null) }
+    var trackToDelete by remember { mutableStateOf<Track?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
+
+    LaunchedEffect(tracks) {
+        val current = selectedTrack ?: return@LaunchedEffect
+        if (tracks.none { it.id == current.id }) {
+            selectedTrack = null
+        }
+    }
 
     LaunchedEffect(tracks, currentPlayingTrackId) {
         val playingId = currentPlayingTrackId ?: return@LaunchedEffect
@@ -60,8 +71,41 @@ fun AuthorDetailScreen(
         }
     }
 
+    trackToDelete?.let { track ->
+        AlertDialog(
+            onDismissRequest = { trackToDelete = null },
+            title = { Text("Elimina traccia") },
+            text = { Text("Eliminare \"${track.title}\"? L'operazione non può essere annullata.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteTrack(track)
+                    trackToDelete = null
+                    selectedTrack = null
+                }) {
+                    Text("Elimina")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { trackToDelete = null }) {
+                    Text("Annulla")
+                }
+            }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            selectedTrack?.let { track ->
+                SmallFloatingActionButton(
+                    onClick = { trackToDelete = track },
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Elimina traccia")
+                }
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { Text(viewModel.artistName) },
@@ -131,7 +175,17 @@ fun AuthorDetailScreen(
                         AuthorTrackItem(
                             track = track,
                             isCurrentlyPlaying = track.id == currentPlayingTrackId,
-                            onClick = { onTrackClick(track.id) }
+                            isSelected = selectedTrack?.id == track.id,
+                            onClick = {
+                                if (selectedTrack != null) {
+                                    selectedTrack = null
+                                } else {
+                                    onTrackClick(track.id)
+                                }
+                            },
+                            onLongClick = {
+                                selectedTrack = if (selectedTrack?.id == track.id) null else track
+                            }
                         )
                         HorizontalDivider()
                     }
@@ -141,14 +195,20 @@ fun AuthorDetailScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AuthorTrackItem(
     track: Track,
     isCurrentlyPlaying: Boolean,
-    onClick: () -> Unit
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     ListItem(
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.combinedClickable(
+            onClick = onClick,
+            onLongClick = onLongClick
+        ),
         headlineContent = {
             Text(
                 track.title,
@@ -175,12 +235,14 @@ private fun AuthorTrackItem(
                 Icon(Icons.Default.MusicNote, contentDescription = null)
             }
         },
-        colors = if (isCurrentlyPlaying) {
-            ListItemDefaults.colors(
+        colors = when {
+            isSelected -> ListItemDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+            isCurrentlyPlaying -> ListItemDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
             )
-        } else {
-            ListItemDefaults.colors()
+            else -> ListItemDefaults.colors()
         }
     )
 }

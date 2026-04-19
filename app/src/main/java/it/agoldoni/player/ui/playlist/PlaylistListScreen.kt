@@ -34,6 +34,7 @@ fun PlaylistListScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
     var playlistToRename by remember { mutableStateOf<Playlist?>(null) }
+    var playlistToDelete by remember { mutableStateOf<Playlist?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -69,6 +70,28 @@ fun PlaylistListScreen(
         )
     }
 
+    playlistToDelete?.let { playlist ->
+        AlertDialog(
+            onDismissRequest = { playlistToDelete = null },
+            title = { Text("Elimina playlist") },
+            text = { Text("Eliminare la playlist \"${playlist.name}\"? Le tracce resteranno in libreria.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deletePlaylist(playlist)
+                    playlistToDelete = null
+                    selectedPlaylist = null
+                }) {
+                    Text("Elimina")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { playlistToDelete = null }) {
+                    Text("Annulla")
+                }
+            }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -91,10 +114,7 @@ fun PlaylistListScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (selectedPlaylist != null) {
                     SmallFloatingActionButton(
-                        onClick = {
-                            viewModel.deletePlaylist(selectedPlaylist!!)
-                            selectedPlaylist = null
-                        },
+                        onClick = { playlistToDelete = selectedPlaylist },
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                     ) {

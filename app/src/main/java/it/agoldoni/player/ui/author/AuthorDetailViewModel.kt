@@ -25,7 +25,7 @@ sealed class AuthorDetailEvent {
 @HiltViewModel
 class AuthorDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    trackRepository: TrackRepository,
+    private val trackRepository: TrackRepository,
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
@@ -121,6 +121,15 @@ class AuthorDetailViewModel @Inject constructor(
             playTrackAt(0)
         } else {
             playTrackAt(nextIndex)
+        }
+    }
+
+    fun deleteTrack(track: Track) {
+        viewModelScope.launch {
+            if (playbackManager.currentTrackId.value == track.id) {
+                playbackManager.stop()
+            }
+            trackRepository.deleteTrack(track)
         }
     }
 
