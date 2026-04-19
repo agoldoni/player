@@ -1,5 +1,6 @@
 package it.agoldoni.player.ui.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -7,6 +8,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import it.agoldoni.player.ui.author.AuthorDetailScreen
+import it.agoldoni.player.ui.author.AuthorListScreen
 import it.agoldoni.player.ui.ftp.FtpConfigScreen
 import it.agoldoni.player.ui.ftp.FtpSyncScreen
 import it.agoldoni.player.ui.info.AppInfoScreen
@@ -24,6 +27,10 @@ sealed class Screen(val route: String) {
     }
     object TrackDetail : Screen("track_detail/{trackId}") {
         fun createRoute(trackId: String) = "track_detail/$trackId"
+    }
+    object AuthorList : Screen("author_list")
+    object AuthorDetail : Screen("author_detail/{artistName}") {
+        fun createRoute(artistName: String) = "author_detail/${Uri.encode(artistName)}"
     }
     object AppInfo : Screen("app_info")
     object Stats : Screen("stats")
@@ -82,6 +89,27 @@ fun PlayerNavGraph(
             arguments = listOf(navArgument("playlistId") { type = NavType.StringType })
         ) {
             PlaylistDetailScreen(
+                onTrackClick = { trackId ->
+                    navController.navigate(Screen.TrackDetail.createRoute(trackId))
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AuthorList.route) {
+            AuthorListScreen(
+                onAuthorClick = { artistName ->
+                    navController.navigate(Screen.AuthorDetail.createRoute(artistName))
+                },
+                onOpenDrawer = onOpenDrawer
+            )
+        }
+
+        composable(
+            route = Screen.AuthorDetail.route,
+            arguments = listOf(navArgument("artistName") { type = NavType.StringType })
+        ) {
+            AuthorDetailScreen(
                 onTrackClick = { trackId ->
                     navController.navigate(Screen.TrackDetail.createRoute(trackId))
                 },

@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -32,6 +33,18 @@ fun PlayerApp() {
                     modifier = Modifier.padding(16.dp)
                 )
                 HorizontalDivider()
+                NavigationDrawerItem(
+                    label = { Text("Autori") },
+                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(Screen.AuthorList.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
                 NavigationDrawerItem(
                     label = { Text("Statistiche") },
                     icon = { Icon(Icons.Default.QueryStats, contentDescription = null) },

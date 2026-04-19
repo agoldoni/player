@@ -1,6 +1,7 @@
 package it.agoldoni.player.data.repository
 
 import it.agoldoni.player.data.local.dao.TrackDao
+import it.agoldoni.player.data.local.entity.ArtistSummary
 import it.agoldoni.player.data.local.entity.Track
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -35,4 +36,10 @@ class TrackRepository @Inject constructor(
     fun getTotalOriginalFileSize(): Flow<Long> = trackDao.getTotalOriginalFileSize()
 
     fun getTotalEncryptedFileSize(): Flow<Long> = trackDao.getTotalEncryptedFileSize()
+
+    fun getDistinctArtistsWithCount(): Flow<List<ArtistSummary>> =
+        trackDao.getDistinctArtistsWithCount()
+
+    fun getTracksByArtist(artist: String): Flow<List<Track>> =
+        trackDao.getTracksByArtist(artist)
 }

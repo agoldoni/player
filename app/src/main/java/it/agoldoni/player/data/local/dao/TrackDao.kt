@@ -1,11 +1,16 @@
 package it.agoldoni.player.data.local.dao
 
 import androidx.room.*
+import it.agoldoni.player.data.local.entity.ArtistSummary
 import it.agoldoni.player.data.local.entity.Track
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TrackDao {
+
+    companion object {
+        const val UNKNOWN_ARTIST = "Sconosciuto"
+    }
 
     @Query("SELECT * FROM tracks ORDER BY title ASC")
     fun getAllTracks(): Flow<List<Track>>
@@ -56,4 +61,26 @@ interface TrackDao {
 
     @Query("SELECT COALESCE(SUM(encryptedFileSize), 0) FROM tracks")
     fun getTotalEncryptedFileSize(): Flow<Long>
+
+    @Query(
+        """
+        SELECT
+            CASE WHEN TRIM(artist) = '' THEN 'Sconosciuto' ELSE artist END AS name,
+            COUNT(*) AS trackCount
+        FROM tracks
+        GROUP BY name
+        ORDER BY name COLLATE NOCASE ASC
+        """
+    )
+    fun getDistinctArtistsWithCount(): Flow<List<ArtistSummary>>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE (:artist = 'Sconosciuto' AND TRIM(artist) = '')
+           OR (:artist != 'Sconosciuto' AND artist = :artist)
+        ORDER BY title COLLATE NOCASE ASC
+        """
+    )
+    fun getTracksByArtist(artist: String): Flow<List<Track>>
 }
