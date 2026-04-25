@@ -1,5 +1,6 @@
 package it.agoldoni.player.domain.ftp
 
+import android.util.Log
 import it.agoldoni.player.util.SupportedAudioExtensions
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -9,6 +10,8 @@ import org.apache.commons.net.ftp.FTPFile
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
+
+private const val TAG = "FtpScanner"
 
 data class FtpRemoteFile(
     val path: String,
@@ -38,9 +41,20 @@ class FtpScanner @Inject constructor() {
     ) {
         coroutineContext.ensureActive()
 
-        val entries: Array<FTPFile> = runCatching { client.listFiles(directory) }
-            .getOrNull()
-            ?: return
+        // Molti server FTP non gestiscono in modo affidabile `LIST <path>` quando
+        // il path contiene spazi o caratteri non-ASCII: facciamo prima `CWD` e poi
+        // `LIST` senza argomenti, che è il comportamento più portabile.
+        if (!client.changeWorkingDirectory(directory)) {
+            Log.w(TAG, "CWD fallito su '$directory' (reply=${client.replyString?.trim()})")
+            return
+        }
+
+        val entries: Array<FTPFile> = try {
+            client.listFiles() ?: emptyArray()
+        } catch (t: Throwable) {
+            Log.w(TAG, "Listing fallito su '$directory'", t)
+            return
+        }
 
         for (entry in entries) {
             coroutineContext.ensureActive()

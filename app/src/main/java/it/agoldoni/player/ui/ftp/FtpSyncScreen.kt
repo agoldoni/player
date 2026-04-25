@@ -25,6 +25,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,9 +34,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.app.Activity
+import android.content.ContextWrapper
+import android.view.WindowManager
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.agoldoni.player.domain.ftp.SyncProgress
@@ -58,6 +63,17 @@ fun FtpSyncScreen(
     val running = when (progress) {
         SyncProgress.Connecting, SyncProgress.Scanning, is SyncProgress.Importing -> true
         else -> false
+    }
+
+    val view = LocalView.current
+    DisposableEffect(running) {
+        val window = view.context.findActivity()?.window
+        if (running) {
+            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
     }
 
     BackHandler(enabled = running) {
@@ -224,4 +240,13 @@ private fun SyncBody(
 private fun LabeledIndeterminate(label: String) {
     Text(label, style = MaterialTheme.typography.bodyMedium)
     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+}
+
+private fun android.content.Context.findActivity(): Activity? {
+    var ctx: android.content.Context? = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
