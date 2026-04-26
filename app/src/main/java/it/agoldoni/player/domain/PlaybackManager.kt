@@ -6,10 +6,13 @@ import android.util.Log
 import it.agoldoni.player.data.local.entity.Track
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -34,9 +37,16 @@ class PlaybackManager @Inject constructor(
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
+    private val _durationMs = MutableStateFlow(0)
+    val durationMs: StateFlow<Int> = _durationMs.asStateFlow()
+
+    private val _positionMs = MutableStateFlow(0)
+    val positionMs: StateFlow<Int> = _positionMs.asStateFlow()
+
     private var mediaPlayer: MediaPlayer? = null
     private var tempFile: File? = null
     private var generation = 0
+    private var positionPollJob: Job? = null
 
     /**
      * Avvia la riproduzione di [track]. Ferma qualunque brano in corso.
@@ -83,8 +93,11 @@ class PlaybackManager @Inject constructor(
                     }
                     tempFile = localTemp
                     mediaPlayer = localPlayer
+                    _durationMs.value = localPlayer.duration.coerceAtLeast(0)
+                    _positionMs.value = 0
                     localPlayer.start()
                     _isPlaying.value = true
+                    startPositionPolling(myGen)
                 } catch (e: Exception) {
                     Log.e(TAG, "Errore avvio riproduzione: ${track.title}", e)
                     localPlayer?.release()
@@ -120,12 +133,39 @@ class PlaybackManager @Inject constructor(
         cleanup()
     }
 
+    /** Sposta la riproduzione al punto indicato (in ms). No-op se nessun brano in corso. */
+    fun seekTo(positionMs: Int) {
+        val p = mediaPlayer ?: return
+        val clamped = positionMs.coerceIn(0, _durationMs.value.coerceAtLeast(0))
+        p.seekTo(clamped)
+        _positionMs.value = clamped
+    }
+
+    private fun startPositionPolling(myGen: Int) {
+        positionPollJob?.cancel()
+        positionPollJob = scope.launch {
+            while (isActive && myGen == generation) {
+                val p = mediaPlayer ?: break
+                runCatching {
+                    if (p.isPlaying) {
+                        _positionMs.value = p.currentPosition.coerceAtLeast(0)
+                    }
+                }
+                delay(500)
+            }
+        }
+    }
+
     private fun cleanup() {
+        positionPollJob?.cancel()
+        positionPollJob = null
         mediaPlayer?.release()
         mediaPlayer = null
         tempFile?.delete()
         tempFile = null
         _currentTrackId.value = null
         _isPlaying.value = false
+        _durationMs.value = 0
+        _positionMs.value = 0
     }
 }

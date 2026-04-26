@@ -21,6 +21,7 @@ fun StatsScreen(
     val totalDuration by viewModel.totalDuration.collectAsState()
     val totalOriginalSize by viewModel.totalOriginalFileSize.collectAsState()
     val totalEncryptedSize by viewModel.totalEncryptedFileSize.collectAsState()
+    val freeSpace by viewModel.freeSpace.collectAsState()
     val albumCount by viewModel.albumCount.collectAsState()
     val artistCount by viewModel.artistCount.collectAsState()
 
@@ -50,6 +51,7 @@ fun StatsScreen(
             StatCard("Durata totale", formatDuration(totalDuration))
             StatCard("Dimensione originale", formatFileSize(totalOriginalSize))
             StatCard("Dimensione cifrata", formatFileSize(totalEncryptedSize))
+            StatCard("Spazio libero", formatFileSize(freeSpace))
             StatCard("Album", "$albumCount")
             StatCard("Autori", "$artistCount")
         }

@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import it.agoldoni.player.ui.navigation.PlayerNavGraph
 import it.agoldoni.player.ui.navigation.Screen
+import it.agoldoni.player.ui.playback.PlaybackBar
 import kotlinx.coroutines.launch
 
 @Composable
@@ -96,9 +97,14 @@ fun PlayerApp() {
             }
         }
     ) {
-        PlayerNavGraph(
-            navController = navController,
-            onOpenDrawer = { scope.launch { drawerState.open() } }
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f)) {
+                PlayerNavGraph(
+                    navController = navController,
+                    onOpenDrawer = { scope.launch { drawerState.open() } }
+                )
+            }
+            PlaybackBar()
+        }
     }
 }
