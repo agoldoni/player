@@ -44,6 +44,15 @@ interface TrackDao {
     @Delete
     suspend fun deleteTrack(track: Track)
 
+    @Query(
+        """
+        DELETE FROM tracks
+        WHERE (:artist = 'Sconosciuto' AND TRIM(artist) = '')
+           OR (:artist != 'Sconosciuto' AND artist = :artist)
+        """
+    )
+    suspend fun deleteTracksByArtist(artist: String)
+
     @Query("SELECT COUNT(*) FROM tracks")
     fun getTrackCount(): Flow<Int>
 

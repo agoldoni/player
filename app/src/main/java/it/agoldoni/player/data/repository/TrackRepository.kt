@@ -21,6 +21,8 @@ class TrackRepository @Inject constructor(
 
     suspend fun deleteTrack(track: Track) = trackDao.deleteTrack(track)
 
+    suspend fun deleteTracksByArtist(artist: String) = trackDao.deleteTracksByArtist(artist)
+
     suspend fun getTrackByUri(uri: String): Track? = trackDao.getTrackByUri(uri)
 
     suspend fun getTrackById(id: String): Track? = trackDao.getTrackById(id)
