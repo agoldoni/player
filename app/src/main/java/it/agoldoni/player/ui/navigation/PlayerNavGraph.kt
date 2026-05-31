@@ -18,6 +18,7 @@ import it.agoldoni.player.ui.playlist.PlaylistListScreen
 import it.agoldoni.player.ui.stats.StatsScreen
 import it.agoldoni.player.ui.trackdetail.TrackDetailScreen
 import it.agoldoni.player.ui.tracklist.TrackListScreen
+import it.agoldoni.player.ui.upload.WifiUploadScreen
 
 sealed class Screen(val route: String) {
     object TrackList : Screen("track_list")
@@ -36,6 +37,7 @@ sealed class Screen(val route: String) {
     object Stats : Screen("stats")
     object FtpConfig : Screen("ftp_config")
     object FtpSync : Screen("ftp_sync")
+    object WifiUpload : Screen("wifi_upload")
 }
 
 @Composable
@@ -138,6 +140,10 @@ fun PlayerNavGraph(
                     }
                 }
             )
+        }
+
+        composable(Screen.WifiUpload.route) {
+            WifiUploadScreen(onBack = { navController.popBackStack() })
         }
     }
 }

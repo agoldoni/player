@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -77,6 +78,18 @@ fun PlayerApp() {
                     onClick = {
                         scope.launch { drawerState.close() }
                         navController.navigate(Screen.FtpSync.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text("Ricevi via Wi-Fi") },
+                    icon = { Icon(Icons.Default.Wifi, contentDescription = null) },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(Screen.WifiUpload.route) {
                             launchSingleTop = true
                         }
                     },

@@ -79,4 +79,6 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.biometric)
     implementation(libs.commons.net)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.cio)
 }

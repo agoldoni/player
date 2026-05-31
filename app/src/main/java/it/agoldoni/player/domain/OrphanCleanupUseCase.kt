@@ -26,6 +26,7 @@ class OrphanCleanupUseCase @Inject constructor(
         cleanupAlbumArt()
         cleanupImportCache()
         cleanupFtpTempCache()
+        cleanupUploadTempCache()
     }
 
     private suspend fun cleanupTracks() {
@@ -70,6 +71,16 @@ class OrphanCleanupUseCase @Inject constructor(
 
         tempDir.listFiles()?.forEach { file ->
             Log.d(TAG, "Rimosso residuo cache FTP: ${file.name}")
+            file.delete()
+        }
+    }
+
+    private fun cleanupUploadTempCache() {
+        val tempDir = File(context.cacheDir, "upload_temp")
+        if (!tempDir.isDirectory) return
+
+        tempDir.listFiles()?.forEach { file ->
+            Log.d(TAG, "Rimosso residuo cache upload Wi-Fi: ${file.name}")
             file.delete()
         }
     }
