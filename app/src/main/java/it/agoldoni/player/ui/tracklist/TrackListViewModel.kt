@@ -13,8 +13,10 @@ import it.agoldoni.player.domain.ImportTrackUseCase
 import it.agoldoni.player.domain.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -53,6 +55,38 @@ class TrackListViewModel @Inject constructor(
         )
 
     val playingTrackId: StateFlow<String?> = playbackManager.currentTrackId
+
+    private val _shuffleEnabled = MutableStateFlow(false)
+    val shuffleEnabled: StateFlow<Boolean> = _shuffleEnabled
+
+    /** Ordine di riproduzione corrente (eventualmente rimescolato). */
+    private val _playbackOrder = MutableStateFlow<List<Track>>(emptyList())
+    private var playbackOrder: List<Track>
+        get() = _playbackOrder.value
+        set(value) { _playbackOrder.value = value }
+    private var currentPlaybackIndex: Int = -1
+
+    /** True se il brano in riproduzione fa parte dell'ordine avviato da questa schermata. */
+    val ownsPlayback: StateFlow<Boolean> = combine(
+        playbackManager.currentTrackId,
+        _playbackOrder
+    ) { id, order ->
+        id != null && order.any { it.id == id }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = false
+    )
+
+    val isPlaying: StateFlow<Boolean> = combine(
+        playbackManager.isPlaying,
+        ownsPlayback
+    ) { playing, owned -> playing && owned }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = false
+        )
 
     private val _events = Channel<TrackListEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
@@ -115,16 +149,91 @@ class TrackListViewModel @Inject constructor(
         }
     }
 
+    /** Riproduzione di un singolo brano selezionato: avvia l'intera libreria a partire da esso. */
     fun togglePlayTrack(track: Track) {
         if (playbackManager.currentTrackId.value == track.id) {
             playbackManager.stop()
             return
         }
-        val started = playbackManager.play(track)
-        if (!started) {
-            viewModelScope.launch {
-                _events.send(TrackListEvent.ShowError("Sessione scaduta, riavvia l'app"))
+        val source = tracks.value
+        if (source.isEmpty()) {
+            val started = playbackManager.play(track)
+            if (!started) sendSessionExpired()
+            return
+        }
+
+        playbackOrder = if (_shuffleEnabled.value) {
+            listOf(track) + source.filter { it.id != track.id }.shuffled()
+        } else {
+            source
+        }
+        val startIndex = playbackOrder.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
+        playTrackAt(startIndex)
+    }
+
+    /** Attiva/disattiva la riproduzione casuale, riordinando al volo se già in corso. */
+    fun toggleShuffle() {
+        val enabled = !_shuffleEnabled.value
+        _shuffleEnabled.value = enabled
+
+        if (!ownsPlayback.value || currentPlaybackIndex < 0) return
+        val current = playbackOrder.getOrNull(currentPlaybackIndex) ?: return
+        val source = tracks.value
+        if (source.isEmpty()) return
+
+        playbackOrder = if (enabled) {
+            listOf(current) + source.filter { it.id != current.id }.shuffled()
+        } else {
+            source
+        }
+        currentPlaybackIndex = playbackOrder.indexOfFirst { it.id == current.id }.coerceAtLeast(0)
+    }
+
+    /** Play/pause dell'intera libreria. */
+    fun togglePlayback() {
+        if (ownsPlayback.value) {
+            if (playbackManager.isPlaying.value) playbackManager.pause() else playbackManager.resume()
+            return
+        }
+
+        val source = tracks.value
+        if (source.isEmpty()) return
+
+        playbackOrder = if (_shuffleEnabled.value) source.shuffled() else source
+        playTrackAt(0)
+    }
+
+    fun skipToNext() {
+        if (!ownsPlayback.value || playbackOrder.isEmpty() || currentPlaybackIndex < 0) return
+
+        val nextIndex = currentPlaybackIndex + 1
+        if (nextIndex >= playbackOrder.size) {
+            if (_shuffleEnabled.value) playbackOrder = playbackOrder.shuffled()
+            playTrackAt(0)
+        } else {
+            playTrackAt(nextIndex)
+        }
+    }
+
+    private fun playTrackAt(index: Int) {
+        val track = playbackOrder[index]
+        currentPlaybackIndex = index
+
+        val started = playbackManager.play(track) {
+            // onCompletion naturale: prossimo brano oppure fine libreria
+            val next = currentPlaybackIndex + 1
+            if (next < playbackOrder.size) {
+                playTrackAt(next)
+            } else {
+                currentPlaybackIndex = -1
             }
+        }
+        if (!started) sendSessionExpired()
+    }
+
+    private fun sendSessionExpired() {
+        viewModelScope.launch {
+            _events.send(TrackListEvent.ShowError("Sessione scaduta, riavvia l'app"))
         }
     }
 

@@ -13,8 +13,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,6 +46,9 @@ fun TrackListScreen(
 ) {
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val playingTrackId by viewModel.playingTrackId.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val shuffleEnabled by viewModel.shuffleEnabled.collectAsStateWithLifecycle()
+    val ownsPlayback by viewModel.ownsPlayback.collectAsStateWithLifecycle()
     val pickFiles = rememberMusicFilePicker { uris -> viewModel.importTracks(uris) }
     var selectedTrack by remember { mutableStateOf<Track?>(null) }
     var trackToDelete by remember { mutableStateOf<Track?>(null) }
@@ -148,6 +154,31 @@ fun TrackListScreen(
                         }
                     },
                     actions = {
+                        if (tracks.isNotEmpty()) {
+                            FilledIconToggleButton(
+                                checked = shuffleEnabled,
+                                onCheckedChange = { viewModel.toggleShuffle() }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Shuffle,
+                                    contentDescription = if (shuffleEnabled) "Disattiva shuffle" else "Attiva shuffle"
+                                )
+                            }
+                            IconButton(onClick = { viewModel.togglePlayback() }) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pausa" else "Riproduci tutto"
+                                )
+                            }
+                            if (isPlaying || ownsPlayback) {
+                                IconButton(onClick = { viewModel.skipToNext() }) {
+                                    Icon(
+                                        imageVector = Icons.Default.SkipNext,
+                                        contentDescription = "Brano successivo"
+                                    )
+                                }
+                            }
+                        }
                         IconButton(onClick = { viewModel.exportCsv() }) {
                             Icon(Icons.Default.Share, contentDescription = "Esporta CSV")
                         }

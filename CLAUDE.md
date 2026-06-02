@@ -13,6 +13,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 No test suite is currently configured.
 
+## Running on device
+
+Il buildType debug ha `applicationIdSuffix = ".debug"`: il package debug è `it.agoldoni.player.debug` (il release `it.agoldoni.player` è installato separatamente sullo stesso device). Per testare le modifiche lanciare SEMPRE il package debug, altrimenti le modifiche non compaiono e la build sembra stale.
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell am force-stop it.agoldoni.player.debug
+adb shell monkey -p it.agoldoni.player.debug -c android.intent.category.LAUNCHER 1
+```
+
+- L'avvio è dietro `BiometricGateScreen`: serve l'impronta digitale (interazione fisica sul device).
+- `adb shell input tap` può essere negato (`INJECT_EVENTS` SecurityException): in tal caso usare solo `uiautomator dump` + `screencap` per ispezionare la UI, non si possono simulare i tocchi via adb.
+- La compilazione incrementale Kotlin a volte resta stale (Gradle dice UP-TO-DATE a torto): in caso di dubbio usare `./gradlew clean assembleDebug`.
+
 ## Architecture
 
 Single-module Android app (`it.agoldoni.player`) using Clean Architecture with MVVM, Jetpack Compose UI, Hilt DI, and Room database.
