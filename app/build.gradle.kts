@@ -22,7 +22,9 @@ android {
             storeFile = file(System.getenv("KEYSTORE_FILE") ?: "${System.getProperty("user.home")}/.android/release-key.jks")
             storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
             keyAlias = System.getenv("KEY_ALIAS") ?: "release"
-            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+            // Se KEY_PASSWORD non è definito si usa KEYSTORE_PASSWORD (caso comune:
+            // keystore e chiave con la stessa password).
+            keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD") ?: ""
         }
     }
 

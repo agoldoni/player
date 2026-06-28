@@ -1,0 +1,4 @@
+# JDK del progetto, gestita con SDKMAN (sdk env).
+# JDK 17: Kotlin 1.9.22 non supporta le versioni >= 22 e il progetto
+# compila con JVM 17 (vedi compileOptions/jvmTarget in app/build.gradle.kts).
+java=17.0.9-tem
