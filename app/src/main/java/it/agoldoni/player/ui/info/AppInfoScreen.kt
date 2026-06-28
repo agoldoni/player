@@ -58,7 +58,7 @@ fun AppInfoScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                "© 2024 Alberto Goldoni",
+                "2026 Alberto Goldoni",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )
