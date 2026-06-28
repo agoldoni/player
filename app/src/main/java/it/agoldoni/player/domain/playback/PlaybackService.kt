@@ -65,6 +65,8 @@ class PlaybackService : MediaSessionService() {
     companion object {
         /** Comando custom: decifra e riproduci il brano corrente di [PlaybackQueue]. */
         const val CMD_PLAY_CURRENT = "it.agoldoni.player.PLAY_CURRENT"
+        /** Comando custom: avanza al brano successivo (con wrap a fine coda). */
+        const val CMD_SKIP_NEXT = "it.agoldoni.player.SKIP_NEXT"
         /** Comando custom: ferma la riproduzione e svuota la coda. */
         const val CMD_STOP = "it.agoldoni.player.STOP"
     }
@@ -111,6 +113,7 @@ class PlaybackService : MediaSessionService() {
         ): MediaSession.ConnectionResult {
             val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                 .add(SessionCommand(CMD_PLAY_CURRENT, Bundle.EMPTY))
+                .add(SessionCommand(CMD_SKIP_NEXT, Bundle.EMPTY))
                 .add(SessionCommand(CMD_STOP, Bundle.EMPTY))
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
@@ -126,6 +129,7 @@ class PlaybackService : MediaSessionService() {
         ): ListenableFuture<SessionResult> {
             when (customCommand.customAction) {
                 CMD_PLAY_CURRENT -> queue.current()?.let { prepareAndPlay(it) } ?: stopPlayback()
+                CMD_SKIP_NEXT -> advanceAndPlay(wrap = true)
                 CMD_STOP -> stopPlayback()
                 else -> return super.onCustomCommand(session, controller, customCommand, args)
             }

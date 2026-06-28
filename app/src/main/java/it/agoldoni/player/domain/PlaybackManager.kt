@@ -146,8 +146,15 @@ class PlaybackManager @Inject constructor(
         withController { it.seekTo(positionMs.toLong().coerceAtLeast(0)) }
     }
 
-    /** Avanza al brano successivo della coda (con wrap a fine coda). */
-    fun skipToNext() = withController { it.seekToNext() }
+    /**
+     * Avanza al brano successivo della coda (con wrap a fine coda).
+     * Usa un comando custom verso il service invece di `MediaController.seekToNext()`:
+     * la timeline del controller contiene un solo `MediaItem` (si riproduce un brano alla
+     * volta), quindi il `seekToNext()` di default sarebbe un no-op.
+     */
+    fun skipToNext() = withController {
+        it.sendCustomCommand(SessionCommand(PlaybackService.CMD_SKIP_NEXT, Bundle.EMPTY), Bundle.EMPTY)
+    }
 
     /** Riordina la coda corrente in base allo shuffle, mantenendo il brano in riproduzione. */
     fun setShuffle(enabled: Boolean) = queue.setShuffle(enabled)
