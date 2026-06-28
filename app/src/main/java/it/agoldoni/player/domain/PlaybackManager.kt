@@ -49,6 +49,23 @@ class PlaybackManager @Inject constructor(
     private var positionPollJob: Job? = null
 
     /**
+     * Handler per "brano successivo" registrato dalla schermata che possiede
+     * l'ordine di riproduzione corrente. Consente alla [PlaybackBar] globale di
+     * avanzare al brano successivo senza conoscere la coda.
+     */
+    private var skipToNextHandler: (() -> Unit)? = null
+
+    /** Registra l'handler di avanzamento; chiamato dalla VM che avvia la coda. */
+    fun setSkipToNextHandler(handler: (() -> Unit)?) {
+        skipToNextHandler = handler
+    }
+
+    /** Avanza al brano successivo della coda corrente, se presente. No-op altrimenti. */
+    fun skipToNext() {
+        skipToNextHandler?.invoke()
+    }
+
+    /**
      * Avvia la riproduzione di [track]. Ferma qualunque brano in corso.
      * [onCompletion] è invocato al termine naturale del brano (non quando
      * viene fermato perché ne parte un altro). Ritorna false se la sessione

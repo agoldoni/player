@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -98,6 +99,13 @@ fun PlaybackBar(
                         Icon(
                             imageVector = if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (state.isPlaying) "Pausa" else "Play",
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    IconButton(onClick = viewModel::skipToNext) {
+                        Icon(
+                            imageVector = Icons.Default.SkipNext,
+                            contentDescription = "Brano successivo",
                             modifier = Modifier.size(32.dp)
                         )
                     }

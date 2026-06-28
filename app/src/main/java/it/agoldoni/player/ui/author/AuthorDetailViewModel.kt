@@ -136,6 +136,7 @@ class AuthorDetailViewModel @Inject constructor(
     private fun playTrackAt(index: Int) {
         val track = playbackOrder[index]
         currentPlaybackIndex = index
+        playbackManager.setSkipToNextHandler { skipToNext() }
 
         val started = playbackManager.play(track) {
             val next = currentPlaybackIndex + 1

@@ -71,4 +71,8 @@ class PlaybackBarViewModel @Inject constructor(
     fun seekTo(positionMs: Int) {
         playbackManager.seekTo(positionMs)
     }
+
+    fun skipToNext() {
+        playbackManager.skipToNext()
+    }
 }

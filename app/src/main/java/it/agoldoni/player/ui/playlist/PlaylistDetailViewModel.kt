@@ -155,6 +155,7 @@ class PlaylistDetailViewModel @Inject constructor(
     private fun playTrackAt(index: Int) {
         val track = playbackOrder[index]
         currentPlaybackIndex = index
+        playbackManager.setSkipToNextHandler { skipToNext() }
 
         viewModelScope.launch {
             playlistRepository.updateLastPlayedTrackId(playlistId, track.id)
