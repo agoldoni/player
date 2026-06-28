@@ -1,8 +1,12 @@
 package it.agoldoni.player
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
@@ -20,9 +24,15 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var cryptoManager: CryptoManager
 
+    // La notifica media richiede POST_NOTIFICATIONS su Android 13+. Il rifiuto non blocca
+    // la riproduzione: si perde solo la notifica visibile (i controlli lock screen restano).
+    private val requestNotificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* esito ignorato */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        maybeRequestNotificationPermission()
         // Su build debug installate su emulatore salta il gate biometrico
         // (non simulabile) sbloccando direttamente la DEK, per poter testare.
         if (cryptoManager.canBypassBiometric) {
@@ -33,6 +43,14 @@ class MainActivity : FragmentActivity() {
                 BiometricGate()
             }
         }
+    }
+
+    private fun maybeRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
     @Composable

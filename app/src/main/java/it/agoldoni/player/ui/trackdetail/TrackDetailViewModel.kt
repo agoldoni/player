@@ -59,7 +59,7 @@ class TrackDetailViewModel @Inject constructor(
             if (playbackManager.isPlaying.value) playbackManager.pause() else playbackManager.resume()
             return
         }
-        val started = playbackManager.play(track)
+        val started = playbackManager.playSingle(track)
         if (!started) {
             viewModelScope.launch {
                 _events.send(TrackDetailEvent.ShowError("Sessione scaduta, riavvia l'app"))

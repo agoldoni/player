@@ -39,23 +39,20 @@ class AuthorDetailViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    /** Tag della coda avviata da questa schermata (i brani di questo autore). */
+    private val ownerTag = "author:$artistName"
+
     private val _shuffleEnabled = MutableStateFlow(false)
     val shuffleEnabled: StateFlow<Boolean> = _shuffleEnabled
 
     private val _events = Channel<AuthorDetailEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    private val _playbackOrder = MutableStateFlow<List<Track>>(emptyList())
-    private var playbackOrder: List<Track>
-        get() = _playbackOrder.value
-        set(value) { _playbackOrder.value = value }
-    private var currentPlaybackIndex: Int = -1
-
     private val ownsCurrentPlayback: StateFlow<Boolean> = combine(
         playbackManager.currentTrackId,
-        _playbackOrder
-    ) { id, order ->
-        id != null && order.any { it.id == id }
+        playbackManager.ownerTag
+    ) { id, tag ->
+        id != null && tag == ownerTag
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -85,18 +82,7 @@ class AuthorDetailViewModel @Inject constructor(
     fun toggleShuffle() {
         val enabled = !_shuffleEnabled.value
         _shuffleEnabled.value = enabled
-
-        if (!ownsCurrentPlayback.value || currentPlaybackIndex < 0) return
-        val current = playbackOrder.getOrNull(currentPlaybackIndex) ?: return
-        val source = tracks.value
-        if (source.isEmpty()) return
-
-        playbackOrder = if (enabled) {
-            listOf(current) + source.filter { it.id != current.id }.shuffled()
-        } else {
-            source
-        }
-        currentPlaybackIndex = playbackOrder.indexOfFirst { it.id == current.id }.coerceAtLeast(0)
+        if (ownsCurrentPlayback.value) playbackManager.setShuffle(enabled)
     }
 
     fun togglePlayback() {
@@ -105,23 +91,15 @@ class AuthorDetailViewModel @Inject constructor(
             return
         }
 
-        val current = tracks.value
-        if (current.isEmpty()) return
+        val source = tracks.value
+        if (source.isEmpty()) return
 
-        playbackOrder = if (_shuffleEnabled.value) current.shuffled() else current
-        playTrackAt(0)
+        val started = playbackManager.playQueue(ownerTag, source, null, _shuffleEnabled.value)
+        if (!started) sendSessionExpired()
     }
 
     fun skipToNext() {
-        if (!ownsCurrentPlayback.value || playbackOrder.isEmpty() || currentPlaybackIndex < 0) return
-
-        val nextIndex = currentPlaybackIndex + 1
-        if (nextIndex >= playbackOrder.size) {
-            if (_shuffleEnabled.value) playbackOrder = playbackOrder.shuffled()
-            playTrackAt(0)
-        } else {
-            playTrackAt(nextIndex)
-        }
+        if (ownsCurrentPlayback.value) playbackManager.skipToNext()
     }
 
     fun deleteTrack(track: Track) {
@@ -133,23 +111,9 @@ class AuthorDetailViewModel @Inject constructor(
         }
     }
 
-    private fun playTrackAt(index: Int) {
-        val track = playbackOrder[index]
-        currentPlaybackIndex = index
-        playbackManager.setSkipToNextHandler { skipToNext() }
-
-        val started = playbackManager.play(track) {
-            val next = currentPlaybackIndex + 1
-            if (next < playbackOrder.size) {
-                playTrackAt(next)
-            } else {
-                currentPlaybackIndex = -1
-            }
-        }
-        if (!started) {
-            viewModelScope.launch {
-                _events.send(AuthorDetailEvent.ShowError("Sessione scaduta, riavvia l'app"))
-            }
+    private fun sendSessionExpired() {
+        viewModelScope.launch {
+            _events.send(AuthorDetailEvent.ShowError("Sessione scaduta, riavvia l'app"))
         }
     }
 }

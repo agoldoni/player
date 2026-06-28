@@ -46,6 +46,11 @@ class TrackListViewModel @Inject constructor(
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
+    private companion object {
+        /** Tag della coda avviata da questa schermata (l'intera libreria). */
+        const val OWNER_TAG = "library"
+    }
+
     val tracks: StateFlow<List<Track>> = trackRepository
         .getAllTracks()
         .stateIn(
@@ -59,19 +64,12 @@ class TrackListViewModel @Inject constructor(
     private val _shuffleEnabled = MutableStateFlow(false)
     val shuffleEnabled: StateFlow<Boolean> = _shuffleEnabled
 
-    /** Ordine di riproduzione corrente (eventualmente rimescolato). */
-    private val _playbackOrder = MutableStateFlow<List<Track>>(emptyList())
-    private var playbackOrder: List<Track>
-        get() = _playbackOrder.value
-        set(value) { _playbackOrder.value = value }
-    private var currentPlaybackIndex: Int = -1
-
-    /** True se il brano in riproduzione fa parte dell'ordine avviato da questa schermata. */
+    /** True se la riproduzione in corso è stata avviata da questa schermata (la libreria). */
     val ownsPlayback: StateFlow<Boolean> = combine(
         playbackManager.currentTrackId,
-        _playbackOrder
-    ) { id, order ->
-        id != null && order.any { it.id == id }
+        playbackManager.ownerTag
+    ) { id, tag ->
+        id != null && tag == OWNER_TAG
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -156,37 +154,19 @@ class TrackListViewModel @Inject constructor(
             return
         }
         val source = tracks.value
-        if (source.isEmpty()) {
-            val started = playbackManager.play(track)
-            if (!started) sendSessionExpired()
-            return
-        }
-
-        playbackOrder = if (_shuffleEnabled.value) {
-            listOf(track) + source.filter { it.id != track.id }.shuffled()
+        val started = if (source.isEmpty()) {
+            playbackManager.playSingle(track)
         } else {
-            source
+            playbackManager.playQueue(OWNER_TAG, source, track.id, _shuffleEnabled.value)
         }
-        val startIndex = playbackOrder.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
-        playTrackAt(startIndex)
+        if (!started) sendSessionExpired()
     }
 
     /** Attiva/disattiva la riproduzione casuale, riordinando al volo se già in corso. */
     fun toggleShuffle() {
         val enabled = !_shuffleEnabled.value
         _shuffleEnabled.value = enabled
-
-        if (!ownsPlayback.value || currentPlaybackIndex < 0) return
-        val current = playbackOrder.getOrNull(currentPlaybackIndex) ?: return
-        val source = tracks.value
-        if (source.isEmpty()) return
-
-        playbackOrder = if (enabled) {
-            listOf(current) + source.filter { it.id != current.id }.shuffled()
-        } else {
-            source
-        }
-        currentPlaybackIndex = playbackOrder.indexOfFirst { it.id == current.id }.coerceAtLeast(0)
+        if (ownsPlayback.value) playbackManager.setShuffle(enabled)
     }
 
     /** Play/pause dell'intera libreria. */
@@ -199,37 +179,12 @@ class TrackListViewModel @Inject constructor(
         val source = tracks.value
         if (source.isEmpty()) return
 
-        playbackOrder = if (_shuffleEnabled.value) source.shuffled() else source
-        playTrackAt(0)
+        val started = playbackManager.playQueue(OWNER_TAG, source, null, _shuffleEnabled.value)
+        if (!started) sendSessionExpired()
     }
 
     fun skipToNext() {
-        if (!ownsPlayback.value || playbackOrder.isEmpty() || currentPlaybackIndex < 0) return
-
-        val nextIndex = currentPlaybackIndex + 1
-        if (nextIndex >= playbackOrder.size) {
-            if (_shuffleEnabled.value) playbackOrder = playbackOrder.shuffled()
-            playTrackAt(0)
-        } else {
-            playTrackAt(nextIndex)
-        }
-    }
-
-    private fun playTrackAt(index: Int) {
-        val track = playbackOrder[index]
-        currentPlaybackIndex = index
-        playbackManager.setSkipToNextHandler { skipToNext() }
-
-        val started = playbackManager.play(track) {
-            // onCompletion naturale: prossimo brano oppure fine libreria
-            val next = currentPlaybackIndex + 1
-            if (next < playbackOrder.size) {
-                playTrackAt(next)
-            } else {
-                currentPlaybackIndex = -1
-            }
-        }
-        if (!started) sendSessionExpired()
+        if (ownsPlayback.value) playbackManager.skipToNext()
     }
 
     private fun sendSessionExpired() {

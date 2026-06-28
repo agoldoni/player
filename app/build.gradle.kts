@@ -13,8 +13,8 @@ android {
         applicationId = "it.agoldoni.player"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = 4
+        versionName = "1.2.0"
     }
 
     signingConfigs {
@@ -84,4 +84,10 @@ dependencies {
     implementation(libs.commons.net)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.cio)
+
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.session)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
