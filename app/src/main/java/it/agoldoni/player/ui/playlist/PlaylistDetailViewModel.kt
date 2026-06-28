@@ -44,23 +44,20 @@ class PlaylistDetailViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    /** Tag della coda avviata da questa schermata (questa playlist). */
+    private val ownerTag = "playlist:$playlistId"
+
     private val _shuffleEnabled = MutableStateFlow(false)
     val shuffleEnabled: StateFlow<Boolean> = _shuffleEnabled
 
     private val _events = Channel<PlaylistDetailEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    private val _playbackOrder = MutableStateFlow<List<Track>>(emptyList())
-    private var playbackOrder: List<Track>
-        get() = _playbackOrder.value
-        set(value) { _playbackOrder.value = value }
-    private var currentPlaybackIndex: Int = -1
-
     private val ownsCurrentPlayback: StateFlow<Boolean> = combine(
         playbackManager.currentTrackId,
-        _playbackOrder
-    ) { id, order ->
-        id != null && order.any { it.id == id }
+        playbackManager.ownerTag
+    ) { id, tag ->
+        id != null && tag == ownerTag
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -88,21 +85,32 @@ class PlaylistDetailViewModel @Inject constructor(
             initialValue = false
         )
 
+    init {
+        // Persiste il brano in riproduzione come "ultimo riprodotto" della playlist,
+        // anche quando l'avanzamento avviene dal service (notifica/lock screen).
+        // A fine riproduzione (la coda non è più nostra) resetta all'inizio della playlist.
+        viewModelScope.launch {
+            var wasOwning = false
+            combine(playbackManager.ownerTag, playbackManager.currentTrackId) { tag, id -> tag to id }
+                .collect { (tag, id) ->
+                    val owning = tag == ownerTag && id != null
+                    if (owning) {
+                        wasOwning = true
+                        playlistRepository.updateLastPlayedTrackId(playlistId, id!!)
+                    } else if (wasOwning) {
+                        wasOwning = false
+                        playlistWithTracks.value?.tracks?.firstOrNull()?.let {
+                            playlistRepository.updateLastPlayedTrackId(playlistId, it.id)
+                        }
+                    }
+                }
+        }
+    }
+
     fun toggleShuffle() {
         val enabled = !_shuffleEnabled.value
         _shuffleEnabled.value = enabled
-
-        if (!ownsCurrentPlayback.value || currentPlaybackIndex < 0) return
-        val current = playbackOrder.getOrNull(currentPlaybackIndex) ?: return
-        val source = playlistWithTracks.value?.tracks ?: return
-        if (source.isEmpty()) return
-
-        playbackOrder = if (enabled) {
-            listOf(current) + source.filter { it.id != current.id }.shuffled()
-        } else {
-            source
-        }
-        currentPlaybackIndex = playbackOrder.indexOfFirst { it.id == current.id }.coerceAtLeast(0)
+        if (ownsCurrentPlayback.value) playbackManager.setShuffle(enabled)
     }
 
     fun addTrack(trackId: String) {
@@ -127,59 +135,18 @@ class PlaylistDetailViewModel @Inject constructor(
         val tracks = data.tracks
         if (tracks.isEmpty()) return
 
-        playbackOrder = if (_shuffleEnabled.value) tracks.shuffled() else tracks
+        // Senza shuffle si riparte dall'ultimo brano riprodotto della playlist, se presente.
+        val startTrackId = if (!_shuffleEnabled.value) data.playlist.lastPlayedTrackId else null
 
-        val lastPlayedId = data.playlist.lastPlayedTrackId
-        val startIndex = if (!_shuffleEnabled.value && lastPlayedId != null) {
-            val idx = playbackOrder.indexOfFirst { it.id == lastPlayedId }
-            if (idx >= 0) idx else 0
-        } else {
-            0
-        }
-
-        playTrackAt(startIndex)
-    }
-
-    fun skipToNext() {
-        if (!ownsCurrentPlayback.value || playbackOrder.isEmpty() || currentPlaybackIndex < 0) return
-
-        val nextIndex = currentPlaybackIndex + 1
-        if (nextIndex >= playbackOrder.size) {
-            if (_shuffleEnabled.value) playbackOrder = playbackOrder.shuffled()
-            playTrackAt(0)
-        } else {
-            playTrackAt(nextIndex)
-        }
-    }
-
-    private fun playTrackAt(index: Int) {
-        val track = playbackOrder[index]
-        currentPlaybackIndex = index
-        playbackManager.setSkipToNextHandler { skipToNext() }
-
-        viewModelScope.launch {
-            playlistRepository.updateLastPlayedTrackId(playlistId, track.id)
-        }
-
-        val started = playbackManager.play(track) {
-            // onCompletion naturale: prossimo brano oppure fine playlist
-            val next = currentPlaybackIndex + 1
-            if (next < playbackOrder.size) {
-                playTrackAt(next)
-            } else {
-                currentPlaybackIndex = -1
-                val firstId = playbackOrder.firstOrNull()?.id
-                if (firstId != null) {
-                    viewModelScope.launch {
-                        playlistRepository.updateLastPlayedTrackId(playlistId, firstId)
-                    }
-                }
-            }
-        }
+        val started = playbackManager.playQueue(ownerTag, tracks, startTrackId, _shuffleEnabled.value)
         if (!started) {
             viewModelScope.launch {
                 _events.send(PlaylistDetailEvent.ShowError("Sessione scaduta, riavvia l'app"))
             }
         }
+    }
+
+    fun skipToNext() {
+        if (ownsCurrentPlayback.value) playbackManager.skipToNext()
     }
 }

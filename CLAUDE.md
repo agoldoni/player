@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew assembleDebug   # Direct Gradle build
 ```
 
-No test suite is currently configured.
+Unit test (JVM): `./gradlew testDebugUnitTest`. Per ora copre solo `PlaybackQueue` (`app/src/test/.../domain/playback/PlaybackQueueTest.kt`); non esistono test strumentati.
 
 ## Running on device
 
@@ -33,7 +33,8 @@ Single-module Android app (`it.agoldoni.player`) using Clean Architecture with M
 
 **Layers:**
 - **data/** — Room DB (`player_db` v5), `TrackDao`/`PlaylistDao`/`FtpConfigDao` with reactive `Flow` queries, `TrackRepository`/`PlaylistRepository`/`FtpConfigRepository`
-- **domain/** — Use cases: `ImportTrackUseCase` (copy → metadata extraction → encrypt → DB insert; accetta `Uri` o `File`), `CryptoManager` (envelope encryption: AndroidKeystore KEK + AES-256-GCM DEK; helpers `encryptBytes`/`decryptBytes` per credenziali), `OrphanCleanupUseCase` (startup file cleanup, include `ftp_temp/`), `CsvExportUseCase`
+- **domain/** — Use cases: `ImportTrackUseCase` (copy → metadata extraction → encrypt → DB insert; accetta `Uri` o `File`), `CryptoManager` (envelope encryption: AndroidKeystore KEK + AES-256-GCM DEK; helpers `encryptBytes`/`decryptBytes` per credenziali), `OrphanCleanupUseCase` (startup file cleanup, include `ftp_temp/`), `CsvExportUseCase`, `PlaybackManager` (façade su `MediaController` per i ViewModel)
+- **domain/playback/** — `PlaybackService` (Media3 `MediaSessionService` + ExoPlayer + MediaSession: riproduzione in background e controlli su lock screen/notifica), `PlaybackQueue` (singleton condiviso: ordine/indice/shuffle, sorgente di verità della coda, usato sia dai ViewModel sia dal service)
 - **domain/ftp/** — `FtpClientFactory`, `FtpScanner` (walk ricorsivo), `FtpDownloader` (stream-based), `SyncFromFtpUseCase` (orchestratore, emette `Flow<SyncProgress>`)
 - **ui/** — Compose screens with ViewModels. Navigation: `TrackList` → `TrackDetail/{trackId}`, `PlaylistList`, `PlaylistDetail`, `Stats`, `AppInfo`, `FtpConfig`, `FtpSync`. App entry gated by `BiometricGateScreen`
 - **di/** — Hilt `DatabaseModule` providing singletons
@@ -42,12 +43,12 @@ Single-module Android app (`it.agoldoni.player`) using Clean Architecture with M
 - Biometric auth unlocks DEK on launch via `CryptoManager.prepareBiometricCipher()` / `obtainDek()`
 - File import: URI → temp copy → metadata extract → album art save → AES-GCM encrypt to `filesDir/tracks/{id}` → DB insert → temp cleanup
 - FTP sync: leggi config cifrata → connetti FTP → walk ricorsivo → download in `cacheDir/ftp_temp/` → estrai metadati → dedup per `(title, artist, album)` → `ImportTrackUseCase(File)` o skip
-- Playback: decrypt to temp file → `MediaPlayer` → cleanup on completion
+- Playback (Media3): ViewModel imposta `PlaybackQueue` → `PlaybackManager` invia comando custom `PLAY_CURRENT` al `PlaybackService` via `MediaController` → il service decifra il brano corrente in temp (`decryptToTempFile`), lo imposta come `MediaItem` su ExoPlayer e suona; avanzamento (fine brano / "successivo" da notifica) gestito dal service leggendo `PlaybackQueue`; cleanup del temp precedente al cambio brano. Il pulsante "successivo" su lock screen è abilitato via `ForwardingPlayer` che espone `COMMAND_SEEK_TO_NEXT`. Se la DEK non è sbloccata (es. processo riavviato), `playQueue()`/`playSingle()` ritornano false → evento "Sessione scaduta".
 - ViewModels use `Channel<Event>` for one-shot UI events
 
-**Tech stack:** Kotlin 1.9.22, AGP 8.2.2, Compose BOM 2024.02.00, Hilt 2.50, Room 2.6.1, Coil 2.5.0, Biometric 1.1.0, Apache Commons Net 3.10.0. Targets SDK 34, min SDK 26, JVM 17.
+**Tech stack:** Kotlin 1.9.22, AGP 8.2.2, Compose BOM 2024.02.00, Hilt 2.50, Room 2.6.1, Coil 2.5.0, Biometric 1.1.0, Media3 1.3.1 (ExoPlayer + Session), Apache Commons Net 3.10.0. Targets SDK 34, min SDK 26, JVM 17.
 
-**Permissions:** `READ_MEDIA_AUDIO` / `READ_EXTERNAL_STORAGE` (storage), `INTERNET` + `ACCESS_NETWORK_STATE` (FTP sync).
+**Permissions:** `READ_MEDIA_AUDIO` / `READ_EXTERNAL_STORAGE` (storage), `INTERNET` + `ACCESS_NETWORK_STATE` (FTP sync), `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_MEDIA_PLAYBACK` + `POST_NOTIFICATIONS` (riproduzione background + notifica media).
 
 ## Notes
 

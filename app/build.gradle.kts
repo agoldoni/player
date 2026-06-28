@@ -84,4 +84,10 @@ dependencies {
     implementation(libs.commons.net)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.cio)
+
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.session)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
