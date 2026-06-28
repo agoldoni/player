@@ -23,6 +23,11 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Su build debug installate su emulatore salta il gate biometrico
+        // (non simulabile) sbloccando direttamente la DEK, per poter testare.
+        if (cryptoManager.canBypassBiometric) {
+            runCatching { cryptoManager.autoUnlockForDebug() }
+        }
         setContent {
             PlayerTheme {
                 BiometricGate()
@@ -32,8 +37,11 @@ class MainActivity : FragmentActivity() {
 
     @Composable
     private fun BiometricGate() {
-        // Se non c'è ancora una DEK (primo utilizzo), non serve autenticazione
-        var isUnlocked by remember { mutableStateOf(!cryptoManager.isDekInitialized) }
+        // Sbloccato se: bypass emulatore già eseguito (sessionDek presente),
+        // oppure primo utilizzo (DEK non ancora creata).
+        var isUnlocked by remember {
+            mutableStateOf(cryptoManager.sessionDek != null || !cryptoManager.isDekInitialized)
+        }
         var errorMessage by remember { mutableStateOf<String?>(null) }
 
         if (isUnlocked) {

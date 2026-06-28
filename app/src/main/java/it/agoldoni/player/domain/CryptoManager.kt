@@ -1,9 +1,11 @@
 package it.agoldoni.player.domain
 
 import android.content.Context
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import dagger.hilt.android.qualifiers.ApplicationContext
+import it.agoldoni.player.BuildConfig
 import java.io.File
 import java.security.KeyStore
 import java.security.SecureRandom
@@ -47,22 +49,46 @@ class CryptoManager @Inject constructor(
     var sessionDek: SecretKey? = null
         private set
 
+    /**
+     * Solo in build debug installate su emulatore: consente di saltare il gate
+     * biometrico (assente/non simulabile su emulatore) creando la KEK senza
+     * vincolo di autenticazione utente, così da poter testare in autonomia.
+     * SEMPRE false in release: [BuildConfig.DEBUG] è false e la condizione
+     * non viene mai valutata true sui dispositivi reali.
+     */
+    val canBypassBiometric: Boolean = BuildConfig.DEBUG && isEmulator()
+
     private fun ensureKekExists() {
         if (keyStore.containsAlias(KEK_ALIAS)) return
         val keyGen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-        keyGen.init(
-            KeyGenParameterSpec.Builder(
-                KEK_ALIAS,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setKeySize(256)
-                .setUserAuthenticationRequired(true)
-                .setInvalidatedByBiometricEnrollment(true)
-                .build()
+        val spec = KeyGenParameterSpec.Builder(
+            KEK_ALIAS,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256)
+            .apply {
+                // Su emulatore debug la KEK non è vincolata all'autenticazione,
+                // altrimenti obtainDek lancerebbe UserNotAuthenticatedException.
+                if (!canBypassBiometric) {
+                    setUserAuthenticationRequired(true)
+                    setInvalidatedByBiometricEnrollment(true)
+                }
+            }
+            .build()
+        keyGen.init(spec)
         keyGen.generateKey()
+    }
+
+    /**
+     * Sblocca la DEK senza autenticazione biometrica. Utilizzabile solo quando
+     * [canBypassBiometric] è true (debug su emulatore). No-op altrimenti.
+     */
+    fun autoUnlockForDebug() {
+        if (!canBypassBiometric) return
+        val (cipher, isSetup) = prepareBiometricCipher()
+        obtainDek(cipher, isSetup)
     }
 
     private fun getKek(): SecretKey {
@@ -190,5 +216,16 @@ class CryptoManager @Inject constructor(
         }
 
         return tempFile
+    }
+
+    /** Riconosce l'esecuzione su emulatore Android (goldfish/ranchu o build SDK). */
+    private fun isEmulator(): Boolean {
+        return Build.HARDWARE.contains("goldfish")
+            || Build.HARDWARE.contains("ranchu")
+            || Build.FINGERPRINT.startsWith("generic")
+            || Build.FINGERPRINT.contains("emulator")
+            || Build.FINGERPRINT.contains("sdk_gphone")
+            || Build.MODEL.contains("sdk_gphone")
+            || Build.PRODUCT.contains("sdk")
     }
 }
