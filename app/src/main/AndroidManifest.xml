@@ -18,6 +18,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- Notifica media: richiesta a runtime su Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Wakelock: ExoPlayer.setWakeMode tiene sveglia la CPU mentre suona a schermo bloccato -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".PlayerApplication"

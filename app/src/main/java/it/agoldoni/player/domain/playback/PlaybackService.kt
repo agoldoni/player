@@ -83,6 +83,9 @@ class PlaybackService : MediaSessionService() {
                 /* handleAudioFocus = */ true
             )
             .setHandleAudioBecomingNoisy(true)
+            // Tiene un PARTIAL_WAKE_LOCK solo mentre suona: evita che la CPU in Doze
+            // (schermo bloccato da un po') fermi la riproduzione. Rilasciato in pausa/stop.
+            .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
             .apply { addListener(playerListener) }
 
