@@ -240,6 +240,15 @@ class CryptoManager @Inject constructor(
         AesGcmStreams.encrypt(key, iv, source, dest)
 
     /**
+     * Verifica che [encryptedFile] sia decifrabile con [key] e ritorna la
+     * dimensione del contenuto in chiaro. Lancia `AEADBadTagException` se il
+     * file è troncato o alterato: è il controllo su cui si basa la verifica di
+     * integrità della libreria.
+     */
+    fun verifyFile(key: SecretKey, encryptedFile: File): Long =
+        AesGcmStreams.verify(key, encryptedFile)
+
+    /**
      * Decifra un file con [sourceKey] e lo ricifra con [destKey] consegnando i
      * blocchi a [sink]: il percorso usato dal mittente del trasferimento per
      * alimentare il canale di rete.

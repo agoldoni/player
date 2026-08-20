@@ -90,6 +90,35 @@ class AesGcmStreamsTest {
     }
 
     @Test
+    fun `verify accetta un file integro e ne riporta la dimensione in chiaro`() {
+        val data = payload(120_000)
+        val file = File.createTempFile("verify_ok_", ".bin").apply { deleteOnExit() }
+        file.writeBytes(encrypt(1, 2, data))
+
+        assertEquals(data.size.toLong(), AesGcmStreams.verify(key(1), file))
+    }
+
+    @Test
+    fun `verify smaschera un file troncato a meta`() {
+        // È il caso del trasferimento interrotto: byte validi, ma manca la coda col tag.
+        val cipherText = encrypt(1, 2, payload(120_000))
+        val file = File.createTempFile("verify_troncato_", ".bin").apply { deleteOnExit() }
+        file.writeBytes(cipherText.copyOf(cipherText.size / 2))
+
+        assertThrows(AEADBadTagException::class.java) { AesGcmStreams.verify(key(1), file) }
+    }
+
+    @Test
+    fun `verify smaschera un byte alterato nel mezzo`() {
+        val cipherText = encrypt(1, 2, payload(120_000))
+        cipherText[cipherText.size / 3] = (cipherText[cipherText.size / 3] + 1).toByte()
+        val file = File.createTempFile("verify_alterato_", ".bin").apply { deleteOnExit() }
+        file.writeBytes(cipherText)
+
+        assertThrows(AEADBadTagException::class.java) { AesGcmStreams.verify(key(1), file) }
+    }
+
+    @Test
     fun `un IV di dimensione errata viene rifiutato subito`() {
         assertThrows(IllegalArgumentException::class.java) {
             AesGcmStreams.encrypt(

@@ -70,6 +70,12 @@ esatta: originale + 28 byte), e il brano completo si riproduce. **Un file tronca
 in libreria**: il file cifrato viene scritto prima dell'inserimento a DB, quindi anche un'app uccisa
 a metà lascia al massimo un orfano, che `OrphanCleanupUseCase` rimuove al riavvio.
 
+**Come controllare la libreria dopo un trasferimento interrotto.** Statistiche → *Verifica
+integrità*: decifra ogni brano e verifica il tag GCM, elencando quelli con file mancante,
+dimensione incoerente o contenuto corrotto. Verificato sugli emulatori il 2026-08-20 sia sul caso
+sano ("Tutti i 5 brani sono integri") sia iniettando due guasti — un file cancellato e 32 byte
+casuali scritti in mezzo a un altro — entrambi segnalati con il motivo giusto.
+
 **Non verificabile su emulatore**: TC-12 (caduta di rete reale), TC-13 (sull'emulatore debug la DEK
 si sblocca da sola), TC-14, TC-18, TC-19 e la scoperta mDNS in condizioni normali.
 

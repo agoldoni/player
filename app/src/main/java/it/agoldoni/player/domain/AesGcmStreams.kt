@@ -178,6 +178,33 @@ internal object AesGcmStreams {
         return offset
     }
 
+    /**
+     * Decifra [file] buttando via il chiaro e ritorna quanti byte conteneva.
+     *
+     * Serve alla verifica di integrità: il tag GCM viene controllato a fine
+     * decifratura, quindi un file troncato o alterato fa fallire la chiamata
+     * con `AEADBadTagException`. Nessun dato in chiaro tocca il disco.
+     */
+    fun verify(key: SecretKey, file: File): Long {
+        val sink = CountingSink()
+        file.inputStream().buffered(BUFFER_SIZE).use { decrypt(key, it, sink) }
+        return sink.total
+    }
+
+    /** Scarta i byte contandoli soltanto. */
+    private class CountingSink : OutputStream() {
+        var total: Long = 0
+            private set
+
+        override fun write(b: Int) {
+            total++
+        }
+
+        override fun write(b: ByteArray, off: Int, len: Int) {
+            total += len
+        }
+    }
+
     private fun readIv(source: InputStream): ByteArray {
         val iv = ByteArray(IV_SIZE)
         var offset = 0
