@@ -13,7 +13,7 @@
 | TC-09 | Migrazione completa | A: drawer → "Invia libreria" → "Tutta la libreria" → Avvia. B: drawer → "Ricevi libreria" → tocca A nell'elenco → confronta il codice → conferma su entrambi | Tutti i brani arrivano; titolo, artista, album, anno, numero di traccia, durata, estensione, dimensione e data di import identici; copertine visibili; playlist ricostruite; brani riproducibili | | ✅ 2026-08-20 (emulatori) — 4 brani, metadati identici campo per campo nel DB |
 | TC-10 | Libreria sovrapposta | Ripetere TC-09 con B che ha già metà dei brani | I duplicati risultano "già presenti"; nessun doppione in lista; le playlist restano complete (i brani già presenti ne fanno parte) | | ✅ 2026-08-20 — giro con libreria identica: 0 aggiunti / 4 già presenti; giro con 2 brani su 4: 2+2, playlist fusa senza duplicati |
 | TC-11 | Codice non corrispondente | Su A premere "Non coincidono" | Nessun byte trasferito; A torna in attesa; dopo 3 rifiuti A si ferma con "Troppi tentativi di collegamento rifiutati" | | ✅ 2026-08-20 — 0 byte trasferiti; al 3° rifiuto il mittente si ferma |
-| TC-12 | Interruzione e ripresa | A metà trasferimento spegnere il Wi-Fi di B, poi riaccenderlo e rilanciare | Errore mostrato in UI; al rilancio i brani già ricevuti risultano "già presenti" e non vengono riscaricati | | ⏳ da fare su rete reale |
+| TC-12 | Interruzione e ripresa | A metà trasferimento spegnere il Wi-Fi di B, poi riaccenderlo e rilanciare | Errore mostrato in UI; al rilancio i brani già ricevuti risultano "già presenti" e non vengono riscaricati | | ⏳ da fare su rete reale | ✅ 2026-08-20 — connessione tagliata a 12 MB: 1 aggiunto, 4 errori, nessuna riga a DB né file per il brano troncato, `transfer_temp` vuota, `AEADBadTagException` nel log |
 | TC-13 | Sessione scaduta | Forzare la chiusura di una delle due app e riaprirla senza autenticarsi (o attendere il riavvio del processo), poi avviare il trasferimento | Messaggio "Sessione scaduta. Riavvia l'app per autenticarti."; nessuna operazione sui file | | ⏳ da fare (l'emulatore debug sblocca la DEK da solo) |
 | TC-14 | Spazio insufficiente | Riempire la memoria di B fino a lasciare meno del doppio della dimensione annunciata | Avviso con spazio richiesto e disponibile **prima** di scaricare qualsiasi brano | | ⏳ da fare |
 | TC-15 | Riservatezza sul filo | Catturare il traffico fra i due telefoni (es. `tcpdump` sul router o `adb shell tcpdump`) durante un trasferimento | Nessun frammento audio o metadato leggibile; i payload sono opachi | | ✅ 2026-08-20 — 693 KB catturati da un proxy: 0 occorrenze di titoli, artisti, album, ID3/fLaC/LAME |
@@ -61,6 +61,14 @@ Su device reale è emerso il caso più importante: sul telefono che riceve, **ap
 DEK non esiste ancora e il gate biometrico all'avvio viene saltato, quindi "Ricevi libreria" moriva
 con "Sessione scaduta. Riavvia l'app per autenticarti." (e riavviare non cambiava nulla). Ora le due
 schermate chiedono l'impronta e creano la chiave al primo uso. Da verificare con TC-24 qui sotto.
+
+**Interruzione a metà brano (TC-12), verificata il 2026-08-20.** Tagliando la connessione dopo
+12 MB con un proxy: il brano a metà fallisce con `AEADBadTagException` — il tag GCM è verificato
+alla fine, quindi un troncamento non passa inosservato — il temporaneo viene cancellato e il brano
+conta come errore. Nel DB e in `files/tracks` resta solo ciò che è arrivato intero (dimensione
+esatta: originale + 28 byte), e il brano completo si riproduce. **Un file troncato non può entrare
+in libreria**: il file cifrato viene scritto prima dell'inserimento a DB, quindi anche un'app uccisa
+a metà lascia al massimo un orfano, che `OrphanCleanupUseCase` rimuove al riavvio.
 
 **Non verificabile su emulatore**: TC-12 (caduta di rete reale), TC-13 (sull'emulatore debug la DEK
 si sblocca da sola), TC-14, TC-18, TC-19 e la scoperta mDNS in condizioni normali.
