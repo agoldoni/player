@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Da API 28 il traffico HTTP in chiaro in uscita è vietato di default.
+    Il trasferimento libreria-a-libreria (domain/transfer/) parla con l'altro
+    telefono su un IP privato della LAN, assegnato dal router e quindi non
+    elencabile qui: la network security config non supporta i range CIDR, per
+    cui l'unica leva disponibile è consentire il cleartext.
+
+    È accettabile perché il cleartext riguarda solo l'involucro HTTP: manifest,
+    audio e copertine viaggiano già cifrati con la chiave di sessione AES-256-GCM
+    derivata dall'handshake ECDH (vedi TransferCrypto). Sul filo non transita
+    nulla di leggibile.
+
+    La configurazione vive in questo file, e non come `usesCleartextTraffic`
+    nel manifest, per tenere la motivazione accanto alla scelta e poterla
+    restringere in futuro (es. solo debug) senza toccare il manifest.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

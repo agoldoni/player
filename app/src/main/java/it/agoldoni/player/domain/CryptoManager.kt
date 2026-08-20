@@ -7,6 +7,8 @@ import android.security.keystore.KeyProperties
 import dagger.hilt.android.qualifiers.ApplicationContext
 import it.agoldoni.player.BuildConfig
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import java.security.KeyStore
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -35,6 +37,10 @@ class CryptoManager @Inject constructor(
         private const val GCM_IV_SIZE = 12
         private const val GCM_TAG_BITS = 128
         private const val DEK_SIZE = 32 // AES-256
+        private const val STREAM_BUFFER_SIZE = 64 * 1024
+
+        /** Dimensione dell'IV GCM: utile a chi costruisce i nonce (es. TransferCrypto). */
+        const val IV_SIZE = GCM_IV_SIZE
     }
 
     private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -146,10 +152,10 @@ class CryptoManager @Inject constructor(
         cipher.init(Cipher.ENCRYPT_MODE, dek)
         val iv = cipher.iv
 
-        dest.outputStream().use { out ->
+        dest.outputStream().buffered(STREAM_BUFFER_SIZE).use { out ->
             out.write(iv)
-            source.inputStream().use { input ->
-                val buffer = ByteArray(8192)
+            source.inputStream().buffered(STREAM_BUFFER_SIZE).use { input ->
+                val buffer = ByteArray(STREAM_BUFFER_SIZE)
                 var bytesRead: Int
                 while (input.read(buffer).also { bytesRead = it } != -1) {
                     val encrypted = cipher.update(buffer, 0, bytesRead)
@@ -196,15 +202,15 @@ class CryptoManager @Inject constructor(
     fun decryptToTempFile(dek: SecretKey, encryptedFile: File, extension: String = "mp3"): File {
         val tempFile = File.createTempFile("playback_", ".$extension", context.cacheDir)
 
-        encryptedFile.inputStream().use { input ->
+        encryptedFile.inputStream().buffered(STREAM_BUFFER_SIZE).use { input ->
             val iv = ByteArray(GCM_IV_SIZE)
             input.read(iv)
 
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, dek, GCMParameterSpec(GCM_TAG_BITS, iv))
 
-            tempFile.outputStream().use { out ->
-                val buffer = ByteArray(8192)
+            tempFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { out ->
+                val buffer = ByteArray(STREAM_BUFFER_SIZE)
                 var bytesRead: Int
                 while (input.read(buffer).also { bytesRead = it } != -1) {
                     val decrypted = cipher.update(buffer, 0, bytesRead)
@@ -217,6 +223,74 @@ class CryptoManager @Inject constructor(
 
         return tempFile
     }
+
+    /**
+     * Cifra [source] su [dest] usando una chiave **arbitraria** (non la DEK) e un
+     * [iv] fornito dal chiamante, che resta responsabile della sua unicità.
+     * Formato output: [IV (12 byte)] [dati cifrati + GCM tag], identico a
+     * [encryptFile], così che [decryptStream] sia il suo inverso esatto.
+     *
+     * Serve al trasferimento fra istanze: il brano viene decifrato con la DEK
+     * locale e ricifrato con la chiave di sessione **mentre scorre verso il
+     * socket**, senza materializzare il file in chiaro su disco.
+     *
+     * Né [source] né [dest] vengono chiusi: il ciclo di vita resta al chiamante.
+     */
+    fun encryptStream(key: SecretKey, iv: ByteArray, source: InputStream, dest: OutputStream) =
+        AesGcmStreams.encrypt(key, iv, source, dest)
+
+    /**
+     * Decifra un file con [sourceKey] e lo ricifra con [destKey] consegnando i
+     * blocchi a [sink]: il percorso usato dal mittente del trasferimento per
+     * alimentare il canale di rete.
+     */
+    suspend fun transcodeTo(
+        sourceKey: SecretKey,
+        sourceFile: File,
+        destKey: SecretKey,
+        destIv: ByteArray,
+        sink: suspend (ByteArray) -> Unit
+    ) = AesGcmStreams.transcodeTo(sourceKey, sourceFile, destKey, destIv, sink)
+
+    /**
+     * Variante di [encryptStream] che consegna i blocchi cifrati a [sink]
+     * invece di scriverli su uno stream: usata dal trasferimento per alimentare
+     * direttamente il canale di rete, senza ponti bloccanti.
+     */
+    suspend fun encryptStreamTo(
+        key: SecretKey,
+        iv: ByteArray,
+        source: InputStream,
+        sink: suspend (ByteArray) -> Unit
+    ) = AesGcmStreams.encryptTo(key, iv, source, sink)
+
+    /**
+     * Inverso di [encryptStream]: legge l'IV dai primi 12 byte di [source] e
+     * scrive il chiaro su [dest].
+     *
+     * Nota: come già accade per [decryptToTempFile], il chiaro viene emesso a
+     * blocchi **prima** della verifica del tag GCM, che avviene solo alla fine.
+     * Chi consuma l'output non deve fidarsi dei dati finché la chiamata non è
+     * ritornata senza eccezioni.
+     */
+    fun decryptStream(key: SecretKey, source: InputStream, dest: OutputStream) =
+        AesGcmStreams.decrypt(key, source, dest)
+
+    /**
+     * Ritorna uno stream che decifra al volo [encryptedFile] con [key].
+     * Il chiamante deve chiuderlo: la chiusura verifica il tag GCM e lancia
+     * `IOException` se il file è stato manomesso.
+     */
+    fun decryptingStream(key: SecretKey, encryptedFile: File): InputStream =
+        AesGcmStreams.decryptingStream(key, encryptedFile)
+
+    /**
+     * Come [encryptBytes], ma con chiave e IV forniti dal chiamante.
+     * Pensato per i payload piccoli del trasferimento (manifest, copertine),
+     * dove i nonce sono gestiti centralmente da chi possiede la sessione.
+     */
+    fun encryptBytes(key: SecretKey, iv: ByteArray, plaintext: ByteArray): ByteArray =
+        AesGcmStreams.encryptBytes(key, iv, plaintext)
 
     /** Riconosce l'esecuzione su emulatore Android (goldfish/ranchu o build SDK). */
     private fun isEmulator(): Boolean {

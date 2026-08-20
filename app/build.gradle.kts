@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -13,8 +14,8 @@ android {
         applicationId = "it.agoldoni.player"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.2.0"
+        versionCode = 5
+        versionName = "1.4.1"
     }
 
     signingConfigs {
@@ -56,6 +57,22 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
     }
+
+    // Nome dell'APK: il debug resta player.apk (le cartelle di output debug/ e
+    // release/ distinguono già i buildType), mentre il release porta la versione
+    // nel nome — player-1.4.1.apk — così gli APK archiviati o inviati restano
+    // distinguibili fuori dalla cartella di build.
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            val fileName = if (variant.buildType.name == "release") {
+                "player-${variant.versionName}.apk"
+            } else {
+                "player.apk"
+            }
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = fileName
+        }
+    }
 }
 
 dependencies {
@@ -84,6 +101,9 @@ dependencies {
     implementation(libs.commons.net)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.cio)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)

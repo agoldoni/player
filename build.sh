@@ -75,7 +75,9 @@ case "$BUILD_TYPE" in
         fi
         echo "[INFO] Avvio build release..."
         ./gradlew assembleRelease
-        APK_PATH="app/build/outputs/apk/release/app-release.apk"
+        # Il release include la versione nel nome (player-<versionName>.apk):
+        # si prende il più recente invece di fissare il nome qui.
+        APK_PATH="$(ls -t app/build/outputs/apk/release/player-*.apk 2>/dev/null | head -n1)"
         ;;
     clean)
         echo "[INFO] Pulizia progetto..."

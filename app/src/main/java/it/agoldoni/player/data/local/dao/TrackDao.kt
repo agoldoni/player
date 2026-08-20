@@ -38,6 +38,10 @@ interface TrackDao {
     @Query("SELECT id FROM tracks")
     suspend fun getAllTrackIds(): List<String>
 
+    /** Lettura one-shot per ID: usata dal trasferimento per materializzare la selezione. */
+    @Query("SELECT * FROM tracks WHERE id IN (:ids)")
+    suspend fun getTracksByIds(ids: List<String>): List<Track>
+
     @Query("SELECT albumArtPath FROM tracks WHERE albumArtPath IS NOT NULL")
     suspend fun getAllAlbumArtPaths(): List<String>
 

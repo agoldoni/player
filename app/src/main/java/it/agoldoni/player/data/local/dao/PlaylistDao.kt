@@ -16,6 +16,10 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlists WHERE id = :playlistId")
     fun getPlaylistWithTracks(playlistId: String): Flow<PlaylistWithTracks?>
 
+    /** Lettura one-shot di tutte le playlist: il trasferimento non può osservare un Flow. */
+    @Query("SELECT * FROM playlists ORDER BY name ASC")
+    suspend fun getAllPlaylistsOnce(): List<Playlist>
+
     @Query("SELECT * FROM playlists WHERE id = :playlistId")
     suspend fun getPlaylistById(playlistId: String): Playlist?
 
@@ -33,6 +37,14 @@ interface PlaylistDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addTrackToPlaylist(crossRef: PlaylistTrackCrossRef)
+
+    /** Inserimento in blocco delle relazioni, usato quando si ricostruisce una playlist ricevuta. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addTracksToPlaylist(crossRefs: List<PlaylistTrackCrossRef>)
+
+    /** Relazioni di una playlist in ordine di aggiunta: serve a comporre il manifest. */
+    @Query("SELECT * FROM playlist_track_cross_ref WHERE playlistId = :playlistId ORDER BY addedAt ASC")
+    suspend fun getCrossRefsForPlaylist(playlistId: String): List<PlaylistTrackCrossRef>
 
     @Query("DELETE FROM playlist_track_cross_ref WHERE playlistId = :playlistId AND trackId = :trackId")
     suspend fun removeTrackFromPlaylist(playlistId: String, trackId: String)

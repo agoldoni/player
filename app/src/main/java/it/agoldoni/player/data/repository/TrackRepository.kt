@@ -27,6 +27,8 @@ class TrackRepository @Inject constructor(
 
     suspend fun getTrackById(id: String): Track? = trackDao.getTrackById(id)
 
+    suspend fun getTracksByIds(ids: List<String>): List<Track> = trackDao.getTracksByIds(ids)
+
     fun getTrackCount(): Flow<Int> = trackDao.getTrackCount()
 
     fun getTotalDuration(): Flow<Long> = trackDao.getTotalDuration()

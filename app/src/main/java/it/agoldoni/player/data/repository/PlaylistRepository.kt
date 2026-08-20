@@ -17,6 +17,8 @@ class PlaylistRepository @Inject constructor(
     fun getPlaylistWithTracks(playlistId: String): Flow<PlaylistWithTracks?> =
         playlistDao.getPlaylistWithTracks(playlistId)
 
+    suspend fun getAllPlaylistsOnce(): List<Playlist> = playlistDao.getAllPlaylistsOnce()
+
     suspend fun getPlaylistById(playlistId: String): Playlist? =
         playlistDao.getPlaylistById(playlistId)
 
@@ -34,6 +36,12 @@ class PlaylistRepository @Inject constructor(
 
     suspend fun addTrackToPlaylist(playlistId: String, trackId: String) =
         playlistDao.addTrackToPlaylist(PlaylistTrackCrossRef(playlistId, trackId))
+
+    suspend fun addTracksToPlaylist(crossRefs: List<PlaylistTrackCrossRef>) =
+        playlistDao.addTracksToPlaylist(crossRefs)
+
+    suspend fun getCrossRefsForPlaylist(playlistId: String): List<PlaylistTrackCrossRef> =
+        playlistDao.getCrossRefsForPlaylist(playlistId)
 
     suspend fun removeTrackFromPlaylist(playlistId: String, trackId: String) =
         playlistDao.removeTrackFromPlaylist(playlistId, trackId)

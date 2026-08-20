@@ -27,6 +27,7 @@ class OrphanCleanupUseCase @Inject constructor(
         cleanupImportCache()
         cleanupFtpTempCache()
         cleanupUploadTempCache()
+        cleanupTransferTempCache()
     }
 
     private suspend fun cleanupTracks() {
@@ -71,6 +72,16 @@ class OrphanCleanupUseCase @Inject constructor(
 
         tempDir.listFiles()?.forEach { file ->
             Log.d(TAG, "Rimosso residuo cache FTP: ${file.name}")
+            file.delete()
+        }
+    }
+
+    private fun cleanupTransferTempCache() {
+        val tempDir = File(context.cacheDir, "transfer_temp")
+        if (!tempDir.isDirectory) return
+
+        tempDir.listFiles()?.forEach { file ->
+            Log.d(TAG, "Rimosso residuo cache trasferimento: ${file.name}")
             file.delete()
         }
     }
