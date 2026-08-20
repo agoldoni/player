@@ -1,9 +1,13 @@
 package it.agoldoni.player
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,6 +37,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         maybeRequestNotificationPermission()
+        maybeRequestIgnoreBatteryOptimizations()
         // Su build debug installate su emulatore salta il gate biometrico
         // (non simulabile) sbloccando direttamente la DEK, per poter testare.
         if (cryptoManager.canBypassBiometric) {
@@ -51,6 +56,19 @@ class MainActivity : FragmentActivity() {
             this, Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
         if (!granted) requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    // Chiede l'esenzione dall'ottimizzazione batteria (whitelist Doze). Senza di essa i
+    // sistemi aggressivi (es. MIUI) uccidono il processo dopo alcuni minuti a schermo
+    // bloccato, fermando la riproduzione. Il dialog di sistema compare una sola volta:
+    // se già esente non facciamo nulla. NB: su MIUI serve anche abilitare "Autostart" e
+    // impostare la batteria su "Nessuna restrizione" dalle impostazioni di sistema.
+    private fun maybeRequestIgnoreBatteryOptimizations() {
+        val pm = getSystemService(PowerManager::class.java) ?: return
+        if (pm.isIgnoringBatteryOptimizations(packageName)) return
+        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+            .setData(Uri.parse("package:$packageName"))
+        runCatching { startActivity(intent) }
     }
 
     @Composable

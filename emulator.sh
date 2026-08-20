@@ -7,7 +7,7 @@ ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 EMULATOR="$ANDROID_HOME/emulator/emulator"
 ADB="$ANDROID_HOME/platform-tools/adb"
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-APK="$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk"
+APK="$PROJECT_DIR/app/build/outputs/apk/debug/player.apk"
 
 # Seleziona AVD
 if [ -n "$1" ]; then

@@ -20,6 +20,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Wakelock: ExoPlayer.setWakeMode tiene sveglia la CPU mentre suona a schermo bloccato -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Esenzione ottimizzazione batteria: senza whitelist Doze i sistemi aggressivi
+         (es. MIUI) uccidono il processo dopo alcuni minuti a schermo bloccato,
+         fermando la riproduzione in background. Richiesta a runtime. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".PlayerApplication"

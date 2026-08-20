@@ -56,7 +56,7 @@ case "$BUILD_TYPE" in
     debug)
         echo "[INFO] Avvio build debug..."
         ./gradlew assembleDebug
-        APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+        APK_PATH="app/build/outputs/apk/debug/player.apk"
         ;;
     release)
         # Verifica che le credenziali di firma siano disponibili

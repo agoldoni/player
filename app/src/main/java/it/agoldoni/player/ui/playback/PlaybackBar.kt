@@ -88,6 +88,15 @@ fun PlaybackBar(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                        if (state.artist.isNotBlank()) {
+                            Text(
+                                text = state.artist,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                         Text(
                             text = "${formatMs(sliderValue.toInt())} / ${formatMs(state.durationMs)}",
                             style = MaterialTheme.typography.bodySmall,

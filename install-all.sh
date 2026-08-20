@@ -4,7 +4,7 @@
 #   --build  compila prima di installare
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-APK="$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk"
+APK="$PROJECT_DIR/app/build/outputs/apk/debug/player.apk"
 
 # Build opzionale
 if [ "$1" = "--build" ]; then
