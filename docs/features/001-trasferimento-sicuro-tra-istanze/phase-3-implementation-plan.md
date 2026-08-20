@@ -365,7 +365,7 @@ percorso di rete reale (loopback) — TC-09, TC-12 e TC-15 richiedono **due devi
 l'utente non apre esplicitamente una delle due nuove schermate: il rischio di regressione sui flussi
 esistenti è confinato alle modifiche additive elencate in §5.
 
-**Versione:** `versionCode 4 → 5`, `versionName 1.2.0 → 1.4.1`.
+**Versione:** `versionCode 4 → 5`, `versionName 1.2.0 → 1.5.0`.
 
 **Piano di rollback:**
 1. Reinstallare l'APK della versione precedente (`versionCode 4`).
@@ -428,7 +428,7 @@ Implementate tutte le task da T-02 a T-18 e T-20; la build debug compila e i tes
   `TrackDao`/`PlaylistDao` e relativi repository (letture one-shot), `OrphanCleanupUseCase`
   (`transfer_temp/`), `PlayerNavGraph`, `PlayerApp`, `AndroidManifest.xml`,
   `build.gradle.kts` + `libs.versions.toml` (ktor-client-cio, kotlinx-serialization,
-  `versionCode 5` / `versionName 1.4.1`), `CLAUDE.md`
+  `versionCode 5` / `versionName 1.5.0`), `CLAUDE.md`
 
 **T-19 — provato su due emulatori (2026-08-20)**
 Sei giri di trasferimento fra due istanze di `Emulator_x86_64` (API 33): libreria completa, dedup,

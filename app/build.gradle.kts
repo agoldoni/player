@@ -15,7 +15,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 5
-        versionName = "1.4.1"
+        versionName = "1.5.0"
     }
 
     signingConfigs {
@@ -60,7 +60,7 @@ android {
 
     // Nome dell'APK: il debug resta player.apk (le cartelle di output debug/ e
     // release/ distinguono già i buildType), mentre il release porta la versione
-    // nel nome — player-1.4.1.apk — così gli APK archiviati o inviati restano
+    // nel nome — player-1.5.0.apk — così gli APK archiviati o inviati restano
     // distinguibili fuori dalla cartella di build.
     applicationVariants.all {
         val variant = this
