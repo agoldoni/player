@@ -21,6 +21,7 @@ import it.agoldoni.player.ui.transfer.ReceiveLibraryScreen
 import it.agoldoni.player.ui.transfer.SendLibraryScreen
 import it.agoldoni.player.ui.tracklist.TrackListScreen
 import it.agoldoni.player.ui.upload.WifiUploadScreen
+import it.agoldoni.player.ui.webdav.WebDavExportScreen
 
 sealed class Screen(val route: String) {
     object TrackList : Screen("track_list")
@@ -42,6 +43,7 @@ sealed class Screen(val route: String) {
     object WifiUpload : Screen("wifi_upload")
     object SendLibrary : Screen("send_library")
     object ReceiveLibrary : Screen("receive_library")
+    object WebDavExport : Screen("webdav_export")
 }
 
 @Composable
@@ -156,6 +158,10 @@ fun PlayerNavGraph(
 
         composable(Screen.ReceiveLibrary.route) {
             ReceiveLibraryScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.WebDavExport.route) {
+            WebDavExportScreen(onBack = { navController.popBackStack() })
         }
     }
 }

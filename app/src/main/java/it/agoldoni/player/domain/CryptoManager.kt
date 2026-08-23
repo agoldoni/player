@@ -274,6 +274,17 @@ class CryptoManager @Inject constructor(
     ) = AesGcmStreams.encryptTo(key, iv, source, sink)
 
     /**
+     * Decifra [encryptedFile] consegnando il chiaro a [sink] a blocchi: il
+     * percorso usato dal server WebDAV per alimentare il canale di rete senza
+     * materializzare il brano né su disco né in memoria.
+     */
+    suspend fun decryptTo(
+        key: SecretKey,
+        encryptedFile: File,
+        sink: suspend (ByteArray) -> Unit
+    ) = AesGcmStreams.decryptTo(key, encryptedFile, sink)
+
+    /**
      * Inverso di [encryptStream]: legge l'IV dai primi 12 byte di [source] e
      * scrive il chiaro su [dest].
      *

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
@@ -116,6 +117,18 @@ fun PlayerApp() {
                     onClick = {
                         scope.launch { drawerState.close() }
                         navController.navigate(Screen.ReceiveLibrary.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text("Esporta su PC") },
+                    icon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = null) },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(Screen.WebDavExport.route) {
                             launchSingleTop = true
                         }
                     },

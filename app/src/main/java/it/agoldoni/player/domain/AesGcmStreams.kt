@@ -89,6 +89,41 @@ internal object AesGcmStreams {
         if (last != null && last.isNotEmpty()) sink(last)
     }
 
+    /**
+     * Decifra [sourceFile] consegnando il chiaro a [sink] a blocchi.
+     *
+     * È il gemello di [transcodeTo] per chi vuole i byte in chiaro invece che
+     * ricifrati: serve al server WebDAV, che li versa direttamente nel canale
+     * di Ktor. Come [transcodeTo] legge a blocchi da 64 KB e **non** usa
+     * [decryptingStream]: quello si appoggia a `CipherInputStream`, che legge
+     * 512 byte per volta e — dato che il provider AEAD accumula l'input fino a
+     * `doFinal` — produce un costo quadratico nel numero di `update`.
+     *
+     * Come per [decrypt], i blocchi arrivano a [sink] **prima** della verifica
+     * del tag GCM: chi li consuma non deve fidarsene finché la chiamata non è
+     * ritornata senza eccezioni.
+     */
+    suspend fun decryptTo(
+        key: SecretKey,
+        sourceFile: File,
+        sink: suspend (ByteArray) -> Unit
+    ) {
+        sourceFile.inputStream().buffered(BUFFER_SIZE).use { input ->
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_BITS, readIv(input)))
+
+            val buffer = ByteArray(BUFFER_SIZE)
+            while (true) {
+                val read = fill(input, buffer)
+                if (read > 0) {
+                    cipher.update(buffer, 0, read)?.takeIf { it.isNotEmpty() }?.let { sink(it) }
+                }
+                if (read < buffer.size) break
+            }
+            cipher.doFinal()?.takeIf { it.isNotEmpty() }?.let { sink(it) }
+        }
+    }
+
     fun encryptBytes(key: SecretKey, iv: ByteArray, plaintext: ByteArray): ByteArray {
         require(iv.size == IV_SIZE) { "IV di ${iv.size} byte, attesi $IV_SIZE" }
         val cipher = Cipher.getInstance(TRANSFORMATION)

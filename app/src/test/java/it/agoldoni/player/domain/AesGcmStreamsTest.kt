@@ -4,6 +4,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -127,6 +128,37 @@ class AesGcmStreamsTest {
                 ByteArrayInputStream(ByteArray(4)),
                 ByteArrayOutputStream()
             )
+        }
+    }
+
+    @Test
+    fun `decryptTo consegna il chiaro a blocchi`() = runBlocking {
+        val data = payload(300_000)
+        val file = File.createTempFile("decrypt_to_", ".bin").apply { deleteOnExit() }
+        file.writeBytes(encrypt(1, 2, data))
+
+        val out = ByteArrayOutputStream()
+        var blocchi = 0
+        AesGcmStreams.decryptTo(key(1), file) { chunk ->
+            blocchi++
+            out.write(chunk)
+        }
+
+        assertArrayEquals(data, out.toByteArray())
+        // I blocchi restano proporzionali al buffer da 64 KB, non ai 512 byte di
+        // CipherInputStream: è ciò che tiene lineare il numero di update().
+        assertTrue("blocchi consegnati: $blocchi", blocchi <= 16)
+    }
+
+    @Test
+    fun `decryptTo smaschera un file alterato`() {
+        val cipherText = encrypt(1, 2, payload(120_000))
+        cipherText[cipherText.size / 3] = (cipherText[cipherText.size / 3] + 1).toByte()
+        val file = File.createTempFile("decrypt_to_alterato_", ".bin").apply { deleteOnExit() }
+        file.writeBytes(cipherText)
+
+        assertThrows(AEADBadTagException::class.java) {
+            runBlocking { AesGcmStreams.decryptTo(key(1), file) { } }
         }
     }
 }
